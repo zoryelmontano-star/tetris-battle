@@ -36,11 +36,11 @@
       <div class="mode-grid">
         <button class="mode-card active" data-mode="duel">
           <span class="mode-icon">♛</span><strong>1v1 Knockout</strong>
-          <small>Loser leaves the battle. Winner keeps the crown and waits for the next queued challenger.</small>
+          <small>Ranked battle. Winner keeps the crown, earns stars, and waits for the next challenger.</small>
         </button>
         <button class="mode-card" data-mode="party">
           <span class="mode-icon">✦</span><strong>Party Session</strong>
-          <small>2–8 players. Most wins during the session becomes the overall champion.</small>
+          <small>2–8 players. Two-minute score race with no attacks. Round winner earns one session win.</small>
         </button>
       </div>
 
@@ -54,7 +54,7 @@
         <button id="joinRoomBtn">Join Room</button>
       </div>
       <div id="roomStatus" class="status">Create a room to generate a code.</div>
-      <p class="fineprint">Game board, scoring, hold, ghost preview, arcade battle music, SFX, rank stars and session history work now. Cross-device opponents, live queue and garbage transfer will activate when we connect the free multiplayer backend.</p>
+      <p class="fineprint">Game board, scoring, hold, ghost preview, arcade music, SFX, rank stars, animated battle effects and session history work now. Real cross-device opponents and live standings will activate when we connect the multiplayer backend.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
@@ -124,5 +124,6 @@
   <script src="hold-ghost.js?v=4"></script>
   <script src="audio-v6.js?v=6"></script>
   <script src="rank-v7.js?v=7"></script>
+  <script src="interaction-v8.js?v=8"></script>
 </body>
 </html>
