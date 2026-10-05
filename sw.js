@@ -1,5 +1,5 @@
-const CACHE='tetris-battle-v9b';
-const ASSETS=['./','index.html','styles.css?v=3','app.js?v=3','hold-ghost.js?v=4','audio-v6.js?v=6','rank-v7.js?v=7','interaction-v8.js?v=8','multiplayer-v1.js?v=1','battle-v9.js?v=9','battle-hotfix-v9.js?v=1','manifest.webmanifest','icon.svg'];
+const CACHE='tetris-battle-v13';
+const ASSETS=['./','index.html','styles.css?v=3','app.js?v=3','hold-ghost.js?v=4','audio-v6.js?v=6','rank-v7.js?v=7','interaction-v8.js?v=8','multiplayer-v1.js?v=2','battle-v9.js?v=9','battle-hotfix-v9.js?v=1','live-grid-v10.js?v=10','ready-v11.js?v=11','room-v12.js?v=12','solo-v13.js?v=13','manifest.webmanifest','icon.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request)))});
