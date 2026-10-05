@@ -1,1 +1,0 @@
-App files uploaded. PNG app icons will be added separately when supported by the connector.
