@@ -1,0 +1,29 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "matchmaking": {
+      ".read": "auth !== null",
+      ".write": "auth !== null"
+    },
+    "sessions": {
+      "$room": {
+        ".read": "auth !== null",
+        "meta": {
+          ".write": "auth !== null"
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth !== null && auth.uid === $uid"
+          }
+        },
+        "events": {
+          "$event": {
+            ".write": "auth !== null",
+            ".validate": "newData.hasChildren(['type','playerId','ts'])"
+          }
+        }
+      }
+    }
+  }
+}
