@@ -13,9 +13,7 @@
           ".write": "auth !== null"
         },
         "players": {
-          "$uid": {
-            ".write": "auth !== null && auth.uid === $uid"
-          }
+          ".write": "auth !== null"
         },
         "events": {
           "$event": {
