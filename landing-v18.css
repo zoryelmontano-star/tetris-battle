@@ -1,0 +1,44 @@
+body:not(.in-game){background:radial-gradient(circle at 50% -5%,rgba(217,168,90,.2),transparent 28%),radial-gradient(circle at 12% 28%,rgba(185,107,134,.18),transparent 24%),radial-gradient(circle at 88% 34%,rgba(133,111,157,.19),transparent 25%),linear-gradient(180deg,#211922 0%,#151116 62%,#0f0d10 100%)}
+body:not(.in-game) .app-shell{max-width:860px}
+body:not(.in-game) .topbar{justify-content:flex-end;min-height:54px;margin-bottom:4px}
+body:not(.in-game) .topbar .brand{display:none}
+#lobby{position:relative;overflow:hidden;max-width:720px;margin:0 auto;padding:26px 28px 30px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(43,32,43,.97),rgba(23,18,25,.98));box-shadow:0 24px 70px rgba(0,0,0,.36)}
+#lobby:before,#lobby:after{content:'';position:absolute;pointer-events:none;opacity:.14;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:30px 30px}
+#lobby:before{inset:0 68% 0 0}#lobby:after{inset:0 0 0 68%}
+#baseLandingHero{position:relative;z-index:3;text-align:center;padding:4px 0 26px}
+#baseLandingHero p{margin:16px 0 0;color:#e9d7c4;font-size:14px;font-weight:850;letter-spacing:.04em}
+#baseLandingHero .block-logo{display:inline-grid;gap:7px;filter:drop-shadow(0 13px 23px rgba(0,0,0,.48))}
+#baseLandingHero .logo-row{display:flex;justify-content:center;gap:5px}
+#baseLandingHero .logo-row b{width:48px;height:48px;display:grid;place-items:center;border-radius:10px;font-size:28px;font-weight:1000;color:#1c151a;border:1px solid rgba(255,255,255,.34);box-shadow:inset 0 5px 0 rgba(255,255,255,.24),inset 0 -6px 0 rgba(0,0,0,.2),0 6px 0 rgba(0,0,0,.3)}
+#baseLandingHero .logo-row b:nth-child(1){background:#d88975}#baseLandingHero .logo-row b:nth-child(2){background:#d6b85e}#baseLandingHero .logo-row b:nth-child(3){background:#78b29b}#baseLandingHero .logo-row b:nth-child(4){background:#a087b6}#baseLandingHero .logo-row b:nth-child(5){background:#c67f9e}#baseLandingHero .logo-row b:nth-child(6){background:#82a971}
+#baseLandingHero .logo-bottom b:nth-child(odd){background:#927faa}#baseLandingHero .logo-bottom b:nth-child(even){background:#c9828d}#baseLandingHero .logo-bottom b:nth-child(3){background:#d8b857}#baseLandingHero .logo-bottom b:nth-child(5){background:#7ca990}
+#baseLandingHero .falling-blocks i{position:absolute;display:block;opacity:.62;filter:drop-shadow(0 8px 8px rgba(0,0,0,.3))}
+#baseLandingHero .tet{width:14px;height:14px;background:currentColor;border-radius:3px}#baseLandingHero .tet:before,#baseLandingHero .tet:after{content:'';position:absolute;width:14px;height:14px;border-radius:3px;background:currentColor;box-shadow:15px 0 currentColor,30px 0 currentColor}#baseLandingHero .tet:before{left:0;top:15px}#baseLandingHero .tet:after{left:15px;top:15px}
+#baseLandingHero .t1{color:#cb7f91;left:6%;top:18px;transform:rotate(18deg)}#baseLandingHero .t2{color:#dab85c;right:8%;top:35px;transform:rotate(-20deg)}#baseLandingHero .t3{color:#76aa8d;left:14%;top:126px;transform:rotate(45deg)}#baseLandingHero .t4{color:#9982b7;right:14%;top:138px;transform:rotate(-8deg)}#baseLandingHero .t5{color:#d98b69;right:4%;top:188px;transform:rotate(22deg)}
+#lobby .lobby-head{display:none!important}
+#lobby .mode-grid{position:relative;z-index:3;display:grid!important;grid-template-columns:1fr!important;gap:14px;max-width:590px;margin:0 auto 20px}
+#lobby .mode-card{width:100%;min-height:94px;display:grid!important;grid-template-columns:60px minmax(0,1fr) 32px;align-items:center;gap:14px;padding:16px 19px!important;border-radius:23px!important;text-align:left!important;transform:none!important;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;background:#292229!important}
+#lobby .mode-card:after{content:'›';font-size:38px;line-height:1;color:rgba(255,255,255,.72);justify-self:end}
+#lobby .mode-card:hover{transform:translateY(-2px)!important;filter:brightness(1.05)}
+#lobby .mode-card[data-mode=duel]{background:linear-gradient(180deg,#bf7681,#8e505b)!important;border-color:#cf9299!important}#lobby .mode-card[data-mode=party]{background:linear-gradient(180deg,#8b78a5,#63547a)!important;border-color:#a58db8!important}#lobby .mode-card[data-mode=solo]{background:linear-gradient(180deg,#7ca27a,#557351)!important;border-color:#91b08c!important}
+#lobby .mode-card.active{box-shadow:0 0 0 3px rgba(241,211,151,.2),inset 0 2px 0 rgba(255,255,255,.16),0 14px 30px rgba(0,0,0,.28)!important}
+#lobby .mode-card .mode-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(20,15,21,.2);border:1px solid rgba(255,255,255,.15);font-size:24px;font-weight:1000}
+#lobby .mode-card strong{display:block;font-size:22px;line-height:1.15;color:#fff6ee}#lobby .mode-card small{display:block;margin-top:5px;color:rgba(255,255,255,.78)!important;font-size:11px;line-height:1.4}
+#lobby .lobby-grid,#duelQuickPanel,#lobby .actions,#roomStatus,#recentRoomsPanel,#soloOptions{position:relative;z-index:3;max-width:590px;margin-left:auto!important;margin-right:auto!important}
+#lobby .lobby-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:13px}
+#lobby .lobby-grid label{font-weight:800;color:#e8d9d3}
+#lobby .lobby-grid input{min-height:48px;border-radius:14px;background:#151216;border-color:#493d48;font-size:14px}
+#playerNameField{grid-column:1/-1}
+#duelQuickPanel{padding:16px;border-radius:20px;border:1px solid #4c3d48;background:linear-gradient(180deg,#2d232d,#1c171e);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.duel-panel-head{display:flex;gap:11px;align-items:center;margin-bottom:12px}.duel-panel-head>span{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#3a2930;color:#edcf92;font-size:20px}.duel-panel-head strong,.duel-panel-head small{display:block}.duel-panel-head small{margin-top:3px;color:#a99ba3;font-size:10px}
+#find2PBtn{width:100%;min-height:60px;border-radius:16px;font-size:18px;font-weight:950;background:linear-gradient(180deg,#d98a95,#a95765)!important;border-color:#e3a4ac!important;color:#fff!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 8px 18px rgba(0,0,0,.22)}
+#duelQuickPanel p{margin:10px 0 0;text-align:center;color:#93858e;font-size:10px}
+#lobby .actions{display:flex;gap:10px}#lobby .actions button{flex:1;min-height:56px;border-radius:16px;font-size:16px;font-weight:900}
+#roomStatus{margin-top:11px;border-radius:14px;text-align:center}
+#lobby .fineprint{position:relative;z-index:3;max-width:590px;margin:14px auto 0;text-align:center;color:#796f76;font-size:9px;line-height:1.5}
+#recentRoomsPanel{margin-top:14px;padding:14px;border-radius:18px;background:#171419;border:1px solid #3e353d}.recent-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.recent-head strong{font-size:12px}.recent-head span{font-size:9px;color:#83777f}.recent-room-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.recent-room-pill{padding:8px 10px;border-radius:11px;background:#241e25;border:1px solid #413640;color:#d9ccca;font-size:10px;font-weight:800}
+#lobby.mode-duel .party-only,#lobby.mode-duel #soloOptions,#lobby.mode-duel #recentRoomsPanel{display:none!important}
+#lobby.mode-party #duelQuickPanel,#lobby.mode-party #soloOptions{display:none!important}
+#lobby.mode-solo #duelQuickPanel,#lobby.mode-solo .party-only,#lobby.mode-solo #playerNameField,#lobby.mode-solo #roomStatus,#lobby.mode-solo #recentRoomsPanel{display:none!important}
+#lobby.mode-solo #soloOptions{display:block!important}
+@media(max-width:650px){body:not(.in-game) .topbar{padding:6px 10px}#lobby{padding:18px 12px 24px;border-radius:18px}#baseLandingHero{padding:3px 0 20px}#baseLandingHero .logo-row b{width:35px;height:35px;font-size:20px;border-radius:8px}#lobby .mode-card{min-height:86px;grid-template-columns:50px minmax(0,1fr) 25px;padding:13px 14px!important}#lobby .mode-card .mode-icon{width:46px;height:46px;border-radius:14px}#lobby .mode-card strong{font-size:19px}#lobby .lobby-grid{grid-template-columns:1fr}}
