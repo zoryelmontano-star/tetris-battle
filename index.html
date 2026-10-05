@@ -3,108 +3,123 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#10131a" />
+  <meta name="theme-color" content="#171419" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Tetris Battle" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
   <title>Tetris Battle</title>
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">FREE PWA PROTOTYPE</p>
-        <h1>Tetris Battle</h1>
+      <div class="brand">
+        <span class="brand-mark">T</span>
+        <div><p class="eyebrow">BATTLE ARCADE</p><h1>Tetris Battle</h1></div>
       </div>
-      <button id="installBtn" class="ghost hidden">Install App</button>
+      <div class="audio-controls">
+        <button id="musicBtn" class="mini-btn">♫ Music</button>
+        <button id="sfxBtn" class="mini-btn">✦ SFX</button>
+        <button id="installBtn" class="mini-btn hidden">Install</button>
+      </div>
     </header>
 
     <section id="lobby" class="card lobby">
-      <div class="lobby-copy">
-        <h2>Quick Battle</h2>
-        <p>1-minute round. Highest score wins. Your best score and wins are saved on this device.</p>
+      <div class="lobby-head">
+        <div><p class="eyebrow">CHOOSE BATTLE</p><h2>Pick a mode</h2></div>
+        <div class="save-note">Previous sessions are saved on this device.</div>
+      </div>
+
+      <div class="mode-grid">
+        <button class="mode-card active" data-mode="duel">
+          <span class="mode-icon">♛</span><strong>1v1 Knockout</strong>
+          <small>Loser is eliminated. Winner keeps the crown and waits for the next queued challenger.</small>
+        </button>
+        <button class="mode-card" data-mode="party">
+          <span class="mode-icon">✦</span><strong>Party Session</strong>
+          <small>2–8 players. Most wins during the session becomes the overall champion.</small>
+        </button>
       </div>
 
       <div class="lobby-grid">
-        <label>
-          Player name
-          <input id="playerName" maxlength="16" value="Player 1" />
-        </label>
-        <label>
-          Room code
-          <input id="roomCode" maxlength="6" placeholder="ABC123" />
-        </label>
+        <label>Player name<input id="playerName" maxlength="16" value="Player 1" /></label>
+        <label>Room code<input id="roomCode" maxlength="6" placeholder="ABC123" /></label>
       </div>
 
       <div class="actions">
         <button id="createRoomBtn" class="primary">Create Room</button>
         <button id="joinRoomBtn">Join Room</button>
       </div>
-
       <div id="roomStatus" class="status">Create a room to generate a code.</div>
-      <p class="fineprint">This first build is fully playable offline. Cross-device multiplayer is the next layer and needs a free backend connection.</p>
+      <p class="fineprint">Game board, scoring, music, session history and battle UI work now. Cross-device opponents, live queue and garbage transfer will activate when we connect the free multiplayer backend.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
-      <div class="card game-card">
+      <div class="arena-card card" id="arenaCard">
+        <div class="battle-strip">
+          <div class="player-badge"><span class="avatar">P1</span><div><small>PLAYER</small><strong id="playerLabel">Player 1</strong></div></div>
+          <div class="mode-pill" id="modePill">1v1 KNOCKOUT</div>
+          <div class="room-pill">ROOM <b id="roomCodeDisplay">------</b></div>
+        </div>
+
         <div class="hud">
-          <div><span>TIME</span><strong id="timer">60</strong></div>
-          <div><span>SCORE</span><strong id="score">0</strong></div>
-          <div><span>COMBO</span><strong id="combo">0</strong></div>
+          <div class="hud-box timer-box"><span>TIME</span><strong id="timer">02:00</strong></div>
+          <div class="hud-box"><span>SCORE</span><strong id="score">0</strong></div>
+          <div class="hud-box combo-box"><span>COMBO</span><strong id="combo">—</strong></div>
+          <div class="hud-box"><span>ATTACK</span><strong id="attack">0</strong></div>
         </div>
 
-        <div class="board-wrap">
-          <canvas id="board" width="300" height="600" aria-label="Tetris board"></canvas>
-          <div id="overlay" class="overlay">
-            <h2 id="overlayTitle">Ready?</h2>
-            <p id="overlayText">Tap Start Battle.</p>
+        <div class="play-stage">
+          <div class="board-shell">
+            <div id="panicLabel" class="panic-label hidden">FINAL 10!</div>
+            <canvas id="board" width="300" height="600" aria-label="Tetris board"></canvas>
+            <div id="gameToast" class="game-toast hidden"><strong id="toastTitle"></strong><span id="toastSub"></span></div>
+            <div id="overlay" class="overlay">
+              <h2 id="overlayTitle">Ready?</h2>
+              <p id="overlayText">Two-minute battle. Clear fast and build combos.</p>
+            </div>
           </div>
-        </div>
 
-        <div class="game-actions">
-          <button id="startBtn" class="primary">Start Battle</button>
-          <button id="leaveBtn">Back to Lobby</button>
+          <aside class="next-panel">
+            <p>NEXT</p>
+            <div class="next-card"><span>1</span><canvas id="next1" width="100" height="78"></canvas></div>
+            <div class="next-card"><span>2</span><canvas id="next2" width="100" height="78"></canvas></div>
+            <div class="streak-box"><span>CROWN</span><strong id="winStreak">♛ 0</strong><small>win streak</small></div>
+          </aside>
         </div>
 
         <div class="touch-controls" aria-label="Touch controls">
-          <button data-action="left">◀</button>
-          <button data-action="rotate">⟳</button>
-          <button data-action="right">▶</button>
-          <button data-action="down">▼</button>
-          <button data-action="drop" class="wide">DROP</button>
+          <button data-action="left">◀</button><button data-action="rotate">⟳</button><button data-action="right">▶</button><button data-action="down">▼</button>
+          <button data-action="drop" class="wide">HARD DROP</button>
         </div>
 
-        <p class="controls-note">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop</p>
+        <div class="game-actions bottom-actions">
+          <button id="pauseBtn">Ⅱ Pause</button>
+          <button id="startBtn" class="primary">Start Battle</button>
+          <button id="quitBtn" class="danger">Quit</button>
+        </div>
+        <p class="controls-note">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause</p>
       </div>
 
       <aside class="card side-card">
-        <h3>Room</h3>
-        <div class="room-code-big" id="roomCodeDisplay">------</div>
-        <div class="player-row">
-          <span id="playerLabel">Player 1</span>
-          <b id="playerState">Waiting</b>
-        </div>
-
+        <div class="side-section"><p class="eyebrow">BATTLE STATUS</p><h3 id="playerState">Waiting</h3></div>
+        <div class="queue-card"><span>QUEUE</span><strong id="queueCount">0</strong><small>waiting players</small></div>
         <hr />
-
-        <h3>Local Record</h3>
+        <h3>Session</h3>
         <div class="record-grid">
+          <div><span>Wins</span><strong id="sessionWins">0</strong></div>
           <div><span>Best</span><strong id="bestScore">0</strong></div>
-          <div><span>Wins</span><strong id="wins">0</strong></div>
         </div>
-
-        <div id="championBanner" class="champion hidden">
-          🏆 New local champion!
-        </div>
+        <div id="championBanner" class="champion hidden">♛ Crown retained</div>
+        <hr />
+        <h3>Previous Sessions</h3>
+        <div id="historyList" class="history-list"><p class="muted">No sessions yet.</p></div>
       </aside>
     </section>
   </main>
-
-  <script src="app.js"></script>
-  <script src="enhancements.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
