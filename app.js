@@ -1,332 +1,70 @@
-const canvas = document.getElementById("board");
-const ctx = canvas.getContext("2d");
-const COLS = 10, ROWS = 20, BLOCK = 30;
-canvas.width = COLS * BLOCK;
-canvas.height = ROWS * BLOCK;
-
-const COLORS = {
-  I: "#4dd7ff", J: "#5b6dff", L: "#ff9b43", O: "#ffd84d",
-  S: "#5ee07d", T: "#b56cff", Z: "#ff5d70"
-};
-
-const SHAPES = {
-  I: [[1,1,1,1]],
-  J: [[1,0,0],[1,1,1]],
-  L: [[0,0,1],[1,1,1]],
-  O: [[1,1],[1,1]],
-  S: [[0,1,1],[1,1,0]],
-  T: [[0,1,0],[1,1,1]],
-  Z: [[1,1,0],[0,1,1]]
-};
-
-let board = createBoard();
-let current = null;
-let dropCounter = 0;
-let lastTime = 0;
-let gameRunning = false;
-let score = 0;
-let combo = 0;
-let timeLeft = 60;
-let timerInterval = null;
-let animationId = null;
-let roomCode = "";
-let deferredPrompt = null;
-
-const $ = id => document.getElementById(id);
-const lobby = $("lobby");
-const game = $("game");
-const overlay = $("overlay");
-const roomStatus = $("roomStatus");
-const installBtn = $("installBtn");
-
-function createBoard() {
-  return Array.from({length: ROWS}, () => Array(COLS).fill(""));
-}
-
-function randomPiece() {
-  const types = Object.keys(SHAPES);
-  const type = types[Math.floor(Math.random()*types.length)];
-  const shape = SHAPES[type].map(row => [...row]);
-  return {
-    type,
-    shape,
-    x: Math.floor(COLS/2) - Math.ceil(shape[0].length/2),
-    y: 0
-  };
-}
-
-function drawCell(x, y, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x*BLOCK, y*BLOCK, BLOCK, BLOCK);
-  ctx.strokeStyle = "rgba(255,255,255,.12)";
-  ctx.strokeRect(x*BLOCK+.5, y*BLOCK+.5, BLOCK-1, BLOCK-1);
-  ctx.fillStyle = "rgba(255,255,255,.12)";
-  ctx.fillRect(x*BLOCK+3, y*BLOCK+3, BLOCK-6, 4);
-}
-
-function draw() {
-  ctx.fillStyle = "#080b10";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = "rgba(255,255,255,.035)";
-  for (let x=0;x<=COLS;x++) {
-    ctx.beginPath(); ctx.moveTo(x*BLOCK,0); ctx.lineTo(x*BLOCK,canvas.height); ctx.stroke();
-  }
-  for (let y=0;y<=ROWS;y++) {
-    ctx.beginPath(); ctx.moveTo(0,y*BLOCK); ctx.lineTo(canvas.width,y*BLOCK); ctx.stroke();
-  }
-  board.forEach((row,y) => row.forEach((cell,x) => {
-    if (cell) drawCell(x,y,COLORS[cell]);
-  }));
-  if (current) {
-    current.shape.forEach((row,py) => row.forEach((value,px) => {
-      if (value) drawCell(current.x+px,current.y+py,COLORS[current.type]);
-    }));
-  }
-}
-
-function collide(piece, dx=0, dy=0, testShape=piece.shape) {
-  for (let y=0;y<testShape.length;y++) {
-    for (let x=0;x<testShape[y].length;x++) {
-      if (!testShape[y][x]) continue;
-      const nx = piece.x + x + dx;
-      const ny = piece.y + y + dy;
-      if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
-      if (ny >= 0 && board[ny][nx]) return true;
-    }
-  }
-  return false;
-}
-
-function merge() {
-  current.shape.forEach((row,y) => row.forEach((value,x) => {
-    if (value && current.y+y >= 0) board[current.y+y][current.x+x] = current.type;
-  }));
-}
-
-function clearLines() {
-  let lines = 0;
-  outer: for (let y=ROWS-1;y>=0;y--) {
-    for (let x=0;x<COLS;x++) if (!board[y][x]) continue outer;
-    board.splice(y,1);
-    board.unshift(Array(COLS).fill(""));
-    lines++;
-    y++;
-  }
-  if (lines > 0) {
-    combo++;
-    const base = [0,100,300,500,800][lines] || 1200;
-    score += base + Math.max(0, combo-1)*50;
-  } else {
-    combo = 0;
-  }
-  updateHud();
-}
-
-function spawn() {
-  current = randomPiece();
-  if (collide(current)) endGame("Game Over");
-}
-
-function move(dir) {
-  if (!gameRunning) return;
-  if (!collide(current, dir, 0)) current.x += dir;
-}
-
-function softDrop() {
-  if (!gameRunning) return;
-  if (!collide(current,0,1)) {
-    current.y++;
-    score += 1;
-  } else lockPiece();
-  dropCounter = 0;
-  updateHud();
-}
-
-function hardDrop() {
-  if (!gameRunning) return;
-  let distance = 0;
-  while (!collide(current,0,1)) { current.y++; distance++; }
-  score += distance*2;
-  lockPiece();
-  updateHud();
-}
-
-function rotateMatrix(matrix) {
-  return matrix[0].map((_, i) => matrix.map(row => row[i]).reverse());
-}
-
-function rotate() {
-  if (!gameRunning) return;
-  const rotated = rotateMatrix(current.shape);
-  const kicks = [0,-1,1,-2,2];
-  for (const kick of kicks) {
-    if (!collide(current,kick,0,rotated)) {
-      current.x += kick;
-      current.shape = rotated;
-      return;
-    }
-  }
-}
-
-function lockPiece() {
-  merge();
-  clearLines();
-  spawn();
-}
-
-function updateHud() {
-  $("score").textContent = score;
-  $("combo").textContent = combo;
-  $("timer").textContent = timeLeft;
-}
-
-function update(time=0) {
-  if (!gameRunning) return;
-  const delta = time - lastTime;
-  lastTime = time;
-  dropCounter += delta;
-  if (dropCounter > 700) softDrop();
-  draw();
-  animationId = requestAnimationFrame(update);
-}
-
-function startGame() {
-  cancelAnimationFrame(animationId);
-  clearInterval(timerInterval);
-  board = createBoard();
-  current = null;
-  score = 0;
-  combo = 0;
-  timeLeft = 60;
-  gameRunning = true;
-  $("playerState").textContent = "Playing";
-  $("championBanner").classList.add("hidden");
-  overlay.classList.add("hidden");
-  updateHud();
-  spawn();
-  lastTime = performance.now();
-  animationId = requestAnimationFrame(update);
-
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    updateHud();
-    if (timeLeft <= 0) endGame("Time!");
-  }, 1000);
-}
-
-function endGame(reason) {
-  if (!gameRunning) return;
-  gameRunning = false;
-  clearInterval(timerInterval);
-  cancelAnimationFrame(animationId);
-  $("playerState").textContent = "Finished";
-
-  const prevBest = Number(localStorage.getItem("tb_best") || 0);
-  let wins = Number(localStorage.getItem("tb_wins") || 0);
-  let isChampion = false;
-  if (score > prevBest) {
-    localStorage.setItem("tb_best", String(score));
-    wins += 1;
-    localStorage.setItem("tb_wins", String(wins));
-    isChampion = true;
-  }
-  refreshRecord();
-
-  $("overlayTitle").textContent = reason;
-  $("overlayText").textContent = `Final score: ${score}`;
-  overlay.classList.remove("hidden");
-  if (isChampion) $("championBanner").classList.remove("hidden");
-}
-
-function refreshRecord() {
-  $("bestScore").textContent = localStorage.getItem("tb_best") || "0";
-  $("wins").textContent = localStorage.getItem("tb_wins") || "0";
-}
-
-function generateCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");
-}
-
-function openGame(code) {
-  roomCode = code.toUpperCase();
-  $("roomCodeDisplay").textContent = roomCode;
-  $("playerLabel").textContent = $("playerName").value.trim() || "Player 1";
-  lobby.classList.add("hidden");
-  game.classList.remove("hidden");
-  $("overlayTitle").textContent = "Ready?";
-  $("overlayText").textContent = "Tap Start Battle.";
-  overlay.classList.remove("hidden");
-  $("playerState").textContent = "Waiting";
-  refreshRecord();
-  draw();
-}
-
-$("createRoomBtn").addEventListener("click", () => {
-  const code = generateCode();
-  $("roomCode").value = code;
-  roomStatus.textContent = `Room ${code} created. This offline build starts a local battle on this device.`;
-  openGame(code);
-});
-
-$("joinRoomBtn").addEventListener("click", () => {
-  const code = $("roomCode").value.trim().toUpperCase();
-  if (code.length < 4) {
-    roomStatus.textContent = "Enter a room code first.";
-    return;
-  }
-  roomStatus.textContent = `Room ${code} selected. Real cross-device joining will be activated when we connect the free backend.`;
-  openGame(code);
-});
-
-$("startBtn").addEventListener("click", startGame);
-
-$("leaveBtn").addEventListener("click", () => {
-  if (gameRunning) endGame("Battle ended");
-  game.classList.add("hidden");
-  lobby.classList.remove("hidden");
-});
-
-document.addEventListener("keydown", e => {
-  if (!gameRunning) return;
-  if (["ArrowLeft","ArrowRight","ArrowDown","ArrowUp"," "].includes(e.key)) e.preventDefault();
-  if (e.key === "ArrowLeft") move(-1);
-  else if (e.key === "ArrowRight") move(1);
-  else if (e.key === "ArrowDown") softDrop();
-  else if (e.key === "ArrowUp") rotate();
-  else if (e.key === " ") hardDrop();
-});
-
-document.querySelectorAll("[data-action]").forEach(btn => {
-  btn.addEventListener("pointerdown", e => {
-    e.preventDefault();
-    const action = btn.dataset.action;
-    if (action === "left") move(-1);
-    if (action === "right") move(1);
-    if (action === "down") softDrop();
-    if (action === "rotate") rotate();
-    if (action === "drop") hardDrop();
-    draw();
-  });
-});
-
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBtn.classList.remove("hidden");
-});
-
-installBtn.addEventListener("click", async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  installBtn.classList.add("hidden");
-});
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
-}
-
-refreshRecord();
-draw();
+const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
+const COLS=10,ROWS=20,BLOCK=30,ROUND_TIME=120;
+canvas.width=COLS*BLOCK;canvas.height=ROWS*BLOCK;
+const COLORS={I:'#58c8ad',J:'#9a82bd',L:'#de8b62',O:'#d9b957',S:'#7fbd72',T:'#b978aa',Z:'#d66d78'};
+const SHAPES={I:[[1,1,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]],O:[[1,1],[1,1]],S:[[0,1,1],[1,1,0]],T:[[0,1,0],[1,1,1]],Z:[[1,1,0],[0,1,1]]};
+const $=id=>document.getElementById(id);
+let board=createBoard(),current=null,queue=[],bag=[],dropCounter=0,lastTime=0,gameRunning=false,paused=false;
+let score=0,combo=0,clearStreak=0,timeLeft=ROUND_TIME,attack=0,timerInterval=null,animationId=null,roomCode='';
+let gameMode=localStorage.getItem('tb_mode')||'duel',sessionWins=0,winStreak=Number(localStorage.getItem('tb_streak')||0);
+let musicOn=localStorage.getItem('tb_music')!=='off',sfxOn=localStorage.getItem('tb_sfx')!=='off',audioCtx=null,musicTimer=null,musicStep=0,panicMode=false,deferredPrompt=null;
+const lobby=$('lobby'),game=$('game'),overlay=$('overlay'),arenaCard=$('arenaCard');
+function createBoard(){return Array.from({length:ROWS},()=>Array(COLS).fill(''))}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function nextType(){if(!bag.length)bag=shuffle(Object.keys(SHAPES));return bag.pop()}
+function makePiece(type=nextType()){const shape=SHAPES[type].map(r=>[...r]);return{type,shape,x:Math.floor(COLS/2)-Math.ceil(shape[0].length/2),y:0}}
+function resetQueue(){bag=[];queue=[makePiece(),makePiece(),makePiece()];renderNext()}
+function adjust(hex,amt){let c=hex.replace('#',''),n=parseInt(c,16),r=Math.max(0,Math.min(255,(n>>16)+amt)),g=Math.max(0,Math.min(255,((n>>8)&255)+amt)),b=Math.max(0,Math.min(255,(n&255)+amt));return `rgb(${r},${g},${b})`}
+function drawCell(x,y,color,block=BLOCK,target=ctx){const px=x*block,py=y*block;target.save();target.shadowColor='rgba(0,0,0,.42)';target.shadowBlur=5;target.shadowOffsetY=3;const grad=target.createLinearGradient(px,py,px+block,py+block);grad.addColorStop(0,adjust(color,35));grad.addColorStop(.45,color);grad.addColorStop(1,adjust(color,-35));target.fillStyle=grad;target.fillRect(px+1,py+1,block-2,block-2);target.shadowColor='transparent';target.fillStyle='rgba(255,255,255,.25)';target.fillRect(px+3,py+3,block-6,3);target.fillStyle='rgba(255,255,255,.09)';target.fillRect(px+3,py+6,3,block-10);target.fillStyle='rgba(0,0,0,.22)';target.fillRect(px+3,py+block-6,block-6,3);target.fillRect(px+block-6,py+5,3,block-10);target.strokeStyle='rgba(255,255,255,.12)';target.strokeRect(px+1.5,py+1.5,block-3,block-3);target.restore()}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const bg=ctx.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,'#151117');bg.addColorStop(1,'#09080a');ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle='rgba(255,255,255,.035)';for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*BLOCK,0);ctx.lineTo(x*BLOCK,canvas.height);ctx.stroke()}for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*BLOCK);ctx.lineTo(canvas.width,y*BLOCK);ctx.stroke()}board.forEach((r,y)=>r.forEach((c,x)=>{if(c)drawCell(x,y,COLORS[c])}));if(current)current.shape.forEach((r,y)=>r.forEach((v,x)=>{if(v)drawCell(current.x+x,current.y+y,COLORS[current.type])}))}
+function renderMini(id,piece){const c=$(id);if(!c||!piece)return;const m=c.getContext('2d');m.clearRect(0,0,c.width,c.height);m.fillStyle='#100d11';m.fillRect(0,0,c.width,c.height);const cell=18,w=piece.shape[0].length*cell,h=piece.shape.length*cell,ox=Math.floor((c.width-w)/2),oy=Math.floor((c.height-h)/2);piece.shape.forEach((r,y)=>r.forEach((v,x)=>{if(!v)return;const px=ox+x*cell,py=oy+y*cell,g=m.createLinearGradient(px,py,px+cell,py+cell);g.addColorStop(0,adjust(COLORS[piece.type],30));g.addColorStop(1,adjust(COLORS[piece.type],-28));m.fillStyle=g;m.fillRect(px+1,py+1,cell-2,cell-2);m.fillStyle='rgba(255,255,255,.22)';m.fillRect(px+3,py+3,cell-6,2)}))}
+function renderNext(){renderMini('next1',queue[0]);renderMini('next2',queue[1])}
+function collide(piece,dx=0,dy=0,testShape=piece.shape){for(let y=0;y<testShape.length;y++)for(let x=0;x<testShape[y].length;x++){if(!testShape[y][x])continue;const nx=piece.x+x+dx,ny=piece.y+y+dy;if(nx<0||nx>=COLS||ny>=ROWS)return true;if(ny>=0&&board[ny][nx])return true}return false}
+function merge(){current.shape.forEach((r,y)=>r.forEach((v,x)=>{if(v&&current.y+y>=0)board[current.y+y][current.x+x]=current.type}))}
+function emptyBoard(){return board.every(r=>r.every(c=>!c))}
+let toastTimer;function toast(title,sub=''){const t=$('gameToast');$('toastTitle').textContent=title;$('toastSub').textContent=sub;t.className='game-toast';void t.offsetWidth;t.classList.add('pop');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),850)}
+function lineName(n){return['','SINGLE','DOUBLE','TRIPLE','TETRIS'][n]||`${n} LINES`}
+function clearLines(){let lines=0;outer:for(let y=ROWS-1;y>=0;y--){for(let x=0;x<COLS;x++)if(!board[y][x])continue outer;board.splice(y,1);board.unshift(Array(COLS).fill(''));lines++;y++}
+ if(lines>0){clearStreak++;combo=Math.max(0,clearStreak-1);const base=[0,100,300,500,800][lines]||1200,comboBonus=combo*75;score+=base+comboBonus;let sent=[0,0,1,2,4][lines]||4;if(combo>0)sent+=Math.min(4,Math.ceil(combo/2));const perfect=emptyBoard();if(perfect){score+=2000;sent+=6}attack+=sent;clearSfx(lines,combo,perfect);const bits=[lineName(lines)];if(combo>0)bits.push(`COMBO x${combo}`);if(perfect)toast('PERFECT CLEAR!',`Board zero · +${sent} garbage attack`);else toast(bits.join(' • '),sent?`+${sent} attack · ${base+comboBonus} pts`:`${base+comboBonus} pts`)}else{clearStreak=0;combo=0}updateHud()}
+function spawn(){current=queue.shift()||makePiece();current.x=Math.floor(COLS/2)-Math.ceil(current.shape[0].length/2);current.y=0;queue.push(makePiece());renderNext();if(collide(current))endGame('lose')}
+function move(dir){if(!gameRunning||paused)return;const old=current.x;if(!collide(current,dir,0))current.x+=dir;if(current.x!==old)sfxMove()}
+function softDrop(){if(!gameRunning||paused)return;if(!collide(current,0,1)){current.y++;score+=1}else lockPiece();dropCounter=0;updateHud()}
+function hardDrop(){if(!gameRunning||paused)return;let d=0;while(!collide(current,0,1)){current.y++;d++}score+=d*2;sfxDrop();lockPiece();updateHud()}
+function rotateMatrix(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse())}
+function rotate(){if(!gameRunning||paused)return;const rotated=rotateMatrix(current.shape);for(const kick of[0,-1,1,-2,2])if(!collide(current,kick,0,rotated)){current.x+=kick;current.shape=rotated;sfxRotate();return}}
+function lockPiece(){merge();clearLines();spawn()}
+function formatTime(s){return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+function updateHud(){$('score').textContent=score.toLocaleString();$('combo').textContent=combo>0?`x${combo}`:'—';$('attack').textContent=attack;$('timer').textContent=formatTime(timeLeft);$('winStreak').textContent=`♛ ${winStreak}`;$('sessionWins').textContent=sessionWins;$('bestScore').textContent=localStorage.getItem('tb_best')||'0'}
+function update(time=0){if(!gameRunning)return;const delta=time-lastTime;lastTime=time;if(!paused){dropCounter+=delta;if(dropCounter>700)softDrop()}draw();animationId=requestAnimationFrame(update)}
+function setPanic(on){if(panicMode===on)return;panicMode=on;arenaCard.classList.toggle('panic',on);$('panicLabel').classList.toggle('hidden',!on);restartMusic()}
+function startGame(){cancelAnimationFrame(animationId);clearInterval(timerInterval);stopMusic();board=createBoard();resetQueue();score=0;combo=0;clearStreak=0;attack=0;timeLeft=ROUND_TIME;paused=false;panicMode=false;arenaCard.classList.remove('panic');$('panicLabel').classList.add('hidden');gameRunning=true;$('playerState').textContent='Battling';$('pauseBtn').textContent='Ⅱ Pause';$('startBtn').textContent='Restart';overlay.classList.add('hidden');updateHud();spawn();lastTime=performance.now();startMusic();animationId=requestAnimationFrame(update);timerInterval=setInterval(()=>{if(paused||!gameRunning)return;timeLeft--;if(timeLeft<=10&&timeLeft>0){setPanic(true);countdownSfx(timeLeft)}updateHud();if(timeLeft<=0)endGame('time')},1000)}
+function pauseGame(){if(!gameRunning)return;paused=!paused;$('pauseBtn').textContent=paused?'▶ Resume':'Ⅱ Pause';if(paused){$('overlayTitle').textContent='PAUSED';$('overlayText').textContent='Tap Resume when you are ready.';overlay.classList.remove('hidden');stopMusic()}else{overlay.classList.add('hidden');lastTime=performance.now();startMusic()}}
+function saveSession(result){const history=JSON.parse(localStorage.getItem('tb_sessions')||'[]');history.unshift({date:new Date().toLocaleString(),mode:gameMode,score,result,wins:sessionWins,streak:winStreak});localStorage.setItem('tb_sessions',JSON.stringify(history.slice(0,12)));renderHistory()}
+function renderHistory(){const list=$('historyList'),h=JSON.parse(localStorage.getItem('tb_sessions')||'[]');if(!h.length){list.innerHTML='<p class="muted">No sessions yet.</p>';return}list.innerHTML=h.slice(0,5).map(x=>`<div class="history-item"><b>${x.mode==='duel'?'1v1':'Party'}</b> · ${Number(x.score).toLocaleString()} pts<br><span>${x.result} · ${x.date}</span></div>`).join('')}
+function endGame(reason){if(!gameRunning)return;gameRunning=false;paused=false;clearInterval(timerInterval);cancelAnimationFrame(animationId);stopMusic();setPanic(false);let title='TIME UP',result='Time up';if(reason==='lose'){title=gameMode==='duel'?'YOU LOSE':'ROUND OVER';result=title;winStreak=0;localStorage.setItem('tb_streak','0');sfxLose()}else if(reason==='win'){title='YOU WIN';result='Win';sessionWins++;winStreak++;localStorage.setItem('tb_streak',String(winStreak));$('championBanner').classList.remove('hidden');sfxWin()}else sfxEnd();const best=Number(localStorage.getItem('tb_best')||0);if(score>best)localStorage.setItem('tb_best',String(score));updateHud();saveSession(result);$('playerState').textContent='Finished';$('overlayTitle').textContent=title;$('overlayText').textContent=`Score ${score.toLocaleString()} · Attack ${attack}`;overlay.classList.remove('hidden')}
+window.finishBattle=result=>endGame(result);
+function quitGame(){if(gameRunning&&!confirm('Quit this battle and return to the lobby?'))return;if(gameRunning){saveSession('Quit');gameRunning=false;clearInterval(timerInterval);cancelAnimationFrame(animationId);stopMusic()}game.classList.add('hidden');lobby.classList.remove('hidden');setPanic(false)}
+function generateCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
+function openGame(code){roomCode=code.toUpperCase();$('roomCodeDisplay').textContent=roomCode;$('playerLabel').textContent=$('playerName').value.trim()||'Player 1';$('modePill').textContent=gameMode==='duel'?'1v1 KNOCKOUT':'PARTY SESSION';lobby.classList.add('hidden');game.classList.remove('hidden');$('overlayTitle').textContent='READY?';$('overlayText').textContent='Two-minute battle. Consecutive line clears build combos.';overlay.classList.remove('hidden');$('playerState').textContent='Waiting';$('startBtn').textContent='Start Battle';resetQueue();updateHud();draw();renderHistory()}
+// Audio
+function audio(){if(!audioCtx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;audioCtx=new C()}if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}
+function tone(freq,dur=.06,type='sine',vol=.03,delay=0,channel='sfx'){if(channel==='sfx'&&!sfxOn||channel==='music'&&!musicOn)return;const ac=audio();if(!ac)return;const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur+.03)}
+function sfxMove(){tone(155,.022,'square',.012)}function sfxRotate(){tone(285,.045,'triangle',.025)}function sfxDrop(){tone(82,.08,'triangle',.045)}
+function clearSfx(lines,c,perfect){const root=330+lines*70;[root,root+110,root+190].forEach((f,i)=>tone(f,.10+i*.02,i===0?'square':'sine',.038,i*.045));if(c>0)tone(root+260+Math.min(c,8)*15,.16,'sine',.045,.14);if(perfect)[523,659,784,1047,1319].forEach((f,i)=>tone(f,.2,'sine',.05,.05*i))}
+function countdownSfx(n){tone(n<=3?760:520,.07,'square',n<=3?.05:.03)}function sfxLose(){[260,210,165,125].forEach((f,i)=>tone(f,.16,'sawtooth',.025,i*.08))}function sfxWin(){[392,523,659,784].forEach((f,i)=>tone(f,.2,'sine',.045,i*.07))}function sfxEnd(){tone(300,.1,'triangle',.03);tone(240,.15,'triangle',.03,.09)}
+const melody=[196,246.94,293.66,246.94,220,261.63,329.63,261.63,174.61,220,261.63,329.63,293.66,246.94,220,196];
+function musicBeat(){if(!musicOn||!gameRunning||paused)return;const f=melody[musicStep%melody.length];tone(f,.13,'triangle',.011,0,'music');if(musicStep%4===0)tone(f/2,.11,'sine',.008,0,'music');musicStep++}
+function startMusic(){if(!musicOn||!gameRunning||paused)return;stopMusic();musicBeat();musicTimer=setInterval(musicBeat,panicMode?105:185)}function stopMusic(){clearInterval(musicTimer);musicTimer=null}function restartMusic(){if(gameRunning&&!paused){stopMusic();startMusic()}}
+function updateAudioBtns(){$('musicBtn').textContent=musicOn?'♫ Music On':'♫ Music Off';$('sfxBtn').textContent=sfxOn?'✦ SFX On':'✦ SFX Off'}
+$('musicBtn').addEventListener('click',()=>{musicOn=!musicOn;localStorage.setItem('tb_music',musicOn?'on':'off');updateAudioBtns();if(musicOn&&gameRunning&&!paused)startMusic();else stopMusic()});
+$('sfxBtn').addEventListener('click',()=>{sfxOn=!sfxOn;localStorage.setItem('tb_sfx',sfxOn?'on':'off');updateAudioBtns();if(sfxOn)tone(520,.08,'sine',.035)});updateAudioBtns();document.addEventListener('pointerdown',()=>audio(),{once:true});
+// UI events
+document.querySelectorAll('.mode-card').forEach(btn=>{btn.classList.toggle('active',btn.dataset.mode===gameMode);btn.addEventListener('click',()=>{gameMode=btn.dataset.mode;localStorage.setItem('tb_mode',gameMode);document.querySelectorAll('.mode-card').forEach(b=>b.classList.toggle('active',b===btn))})});
+$('createRoomBtn').addEventListener('click',()=>{const code=generateCode();$('roomCode').value=code;$('roomStatus').textContent=`Room ${code} created.`;openGame(code)});
+$('joinRoomBtn').addEventListener('click',()=>{const code=$('roomCode').value.trim().toUpperCase();if(code.length<4){$('roomStatus').textContent='Enter a room code first.';return}openGame(code)});
+$('startBtn').addEventListener('click',startGame);$('pauseBtn').addEventListener('click',pauseGame);$('quitBtn').addEventListener('click',quitGame);
+document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='p'){pauseGame();return}if(!gameRunning||paused)return;if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft')move(-1);else if(e.key==='ArrowRight')move(1);else if(e.key==='ArrowDown')softDrop();else if(e.key==='ArrowUp')rotate();else if(e.key===' ')hardDrop()});
+document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('pointerdown',e=>{e.preventDefault();const a=btn.dataset.action;if(a==='left')move(-1);if(a==='right')move(1);if(a==='down')softDrop();if(a==='rotate')rotate();if(a==='drop')hardDrop();draw()}));
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').classList.remove('hidden')});$('installBtn').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('installBtn').classList.add('hidden')});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
+renderHistory();updateHud();resetQueue();draw();
