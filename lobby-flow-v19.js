@@ -17,6 +17,12 @@
   `;
   modeGrid.insertAdjacentElement('afterend', setup);
 
+  // Keep the chooser card clean. Sprint/Marathon choices belong on the Solo setup screen.
+  const soloCard = modeGrid.querySelector('.mode-card[data-mode="solo"]');
+  if (soloCard) {
+    soloCard.innerHTML = `<span class="mode-icon">◆</span><span><strong>Solo Session</strong></span>`;
+  }
+
   // Move all lower controls into the setup screen, preserving existing event listeners.
   const movable = [
     lobby.querySelector('.lobby-grid'),
