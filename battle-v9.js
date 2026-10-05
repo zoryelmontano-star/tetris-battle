@@ -4,6 +4,7 @@
   const sideCard = document.querySelector('.side-card');
   const arena = document.getElementById('arenaCard');
   const KO_TARGET = 5;
+  COLORS.G = COLORS.G || '#777177';
   let myKO = 0;
   let rivalKO = 0;
   let incomingGarbage = 0;
