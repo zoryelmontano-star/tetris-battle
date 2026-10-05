@@ -1,3 +1,3 @@
 # Tetris Battle
 
-Free installable PWA prototype for a 60-second Tetris battle game.
+Free installable PWA prototype for a 120-second Tetris battle game.
