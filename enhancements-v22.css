@@ -1,0 +1,33 @@
+/* v22: larger local Party board, duel/AI actions, invite controls, and solo presentation. */
+#duelQuickPanel .duel-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#battleAIBtn{min-height:60px;border-radius:16px;font-size:16px;font-weight:950;background:linear-gradient(180deg,#8b78a5,#625278)!important;border-color:#a58db8!important;color:#fff!important}
+#sharePartyBtn{background:linear-gradient(180deg,#7aa58c,#517561)!important;border-color:#92b69f!important;color:#fff!important}
+.match-retry-btn{margin-top:14px;min-width:170px;padding:11px 16px;border-radius:13px;font-weight:900;background:linear-gradient(180deg,#d98a95,#a95765)!important;color:#fff!important}
+
+/* In Party, your own board is the focal board. Opponents stay visible but smaller. */
+.live-arena-grid.party{grid-template-columns:minmax(330px,1.65fr) repeat(2,minmax(145px,.72fr))!important;gap:10px!important;align-items:start!important}
+.live-arena-grid.party .local-live-tile{grid-column:1!important;grid-row:span 2!important;order:-10!important;padding:10px!important}
+.live-arena-grid.party .local-live-tile .play-stage{grid-template-columns:72px minmax(0,300px) 72px!important;gap:7px!important;margin:0 auto!important}
+.live-arena-grid.party .local-live-tile .hold-panel,.live-arena-grid.party .local-live-tile .next-panel{display:block!important;width:72px!important;padding:6px!important}
+.live-arena-grid.party .local-live-tile .board-shell{width:min(100%,300px)!important;max-width:300px!important}
+.live-arena-grid.party .remote-live-tile{align-self:start!important;padding:5px!important}
+.live-arena-grid.party .remote-board-shell{width:min(100%,150px)!important;max-width:150px!important}
+.live-arena-grid.party .remote-live-tile .live-player-head{grid-template-columns:25px minmax(0,1fr)!important}
+
+/* Solo has no two-minute cap: the clock is elapsed time. */
+#game.solo-live-mode .timer-box span{letter-spacing:.06em}
+
+@media(max-width:900px){
+  .live-arena-grid.party{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .live-arena-grid.party .local-live-tile{grid-column:1/-1!important;grid-row:auto!important}
+  .live-arena-grid.party .local-live-tile .play-stage{grid-template-columns:70px minmax(0,300px) 70px!important}
+}
+@media(max-width:620px){
+  #duelQuickPanel .duel-action-row{grid-template-columns:1fr}
+  .live-arena-grid.party{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+  .live-arena-grid.party .local-live-tile{grid-column:1/-1!important;padding:7px!important}
+  .live-arena-grid.party .local-live-tile .play-stage{grid-template-columns:minmax(0,1fr)!important}
+  .live-arena-grid.party .local-live-tile .hold-panel,.live-arena-grid.party .local-live-tile .next-panel{display:none!important}
+  .live-arena-grid.party .local-live-tile .board-shell{width:min(100%,300px)!important;margin:0 auto!important}
+  .live-arena-grid.party .remote-board-shell{max-width:135px!important}
+}
