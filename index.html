@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="landing-base-v17.css?v=17" />
   <title>Tetris Battle</title>
 </head>
 <body>
@@ -28,6 +29,17 @@
     </header>
 
     <section id="lobby" class="card lobby">
+      <div id="baseLandingHero">
+        <div class="falling-blocks" aria-hidden="true">
+          <i class="tet t1"></i><i class="tet t2"></i><i class="tet t3"></i><i class="tet t4"></i><i class="tet t5"></i>
+        </div>
+        <div class="block-logo" aria-label="Tetris Battle">
+          <span class="logo-row logo-top"><b>T</b><b>E</b><b>T</b><b>R</b><b>I</b><b>S</b></span>
+          <span class="logo-row logo-bottom"><b>B</b><b>A</b><b>T</b><b>T</b><b>L</b><b>E</b></span>
+        </div>
+        <p>Battle, Party, or Play Solo</p>
+      </div>
+
       <div class="lobby-head">
         <div><p class="eyebrow">CHOOSE MODE</p><h2>Pick a game</h2></div>
         <div class="save-note">Previous sessions are saved on this device.</div>
@@ -35,12 +47,12 @@
 
       <div class="mode-grid">
         <button class="mode-card active" data-mode="duel">
-          <span class="mode-icon">♛</span><strong>1v1 Knockout</strong>
-          <small>Ranked battle. First to 5 KOs wins. Garbage can be countered before it rises.</small>
+          <span class="mode-icon">▦▦</span><strong>2P Battle</strong>
+          <small>Exactly 2 players. First to 5 knockouts wins.</small>
         </button>
         <button class="mode-card" data-mode="party">
           <span class="mode-icon">✦</span><strong>Party Session</strong>
-          <small>2–6 players. Two-minute score race with no attacks. Round winner earns one session win.</small>
+          <small>2–6 players. Two-minute score race with no attacks.</small>
         </button>
       </div>
 
@@ -125,7 +137,7 @@
   <script src="audio-v6.js?v=6"></script>
   <script src="rank-v7.js?v=7"></script>
   <script src="interaction-v8.js?v=8"></script>
-  <script src="firebase-config.js?v=1"></script>
+  <script src="firebase-config.js?v=2"></script>
   <script src="multiplayer-v1.js?v=3"></script>
   <script src="battle-v9.js?v=9"></script>
   <script src="battle-hotfix-v9.js?v=1"></script>
