@@ -1,5 +1,5 @@
-const CACHE='tetris-battle-v17';
-const ASSETS=['./','index.html','styles.css?v=3','landing-base-v17.css?v=17','app.js?v=3','hold-ghost.js?v=4','audio-v6.js?v=6','rank-v7.js?v=7','interaction-v8.js?v=8','firebase-config.js?v=2','multiplayer-v1.js?v=3','battle-v9.js?v=9','battle-hotfix-v9.js?v=1','live-grid-v10.js?v=10','ready-v11.js?v=11','room-v12.js?v=12','solo-v13.js?v=13','ux-v14.js?v=14','landing-v15.js?v=15','timing-v16.js?v=16','manifest.webmanifest','icon.svg'];
+const CACHE='tetris-battle-v18';
+const ASSETS=['./','index.html','styles.css?v=3','landing-base-v17.css?v=17','app.js?v=3','hold-ghost.js?v=4','audio-v6.js?v=6','rank-v7.js?v=7','interaction-v8.js?v=8','firebase-config.js?v=2','multiplayer-v1.js?v=3','battle-v9.js?v=9','battle-hotfix-v9.js?v=1','live-grid-v10.js?v=10','ready-v11.js?v=11','room-v12.js?v=12','solo-v13.js?v=13','ux-v14.js?v=14','landing-v15.js?v=15','timing-v16.js?v=16','firebase-ui-v17.js?v=17','manifest.webmanifest','icon.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request)))});
