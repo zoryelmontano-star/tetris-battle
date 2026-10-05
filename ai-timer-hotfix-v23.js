@@ -1,7 +1,6 @@
-// v23: show the real CPU board in the live duel layout and hard-reset timed rounds before restart.
+// v23: visible AI rival tile and hard-reset timed rounds before restart.
 (() => {
   const $ = id => document.getElementById(id);
-  let aiMirrorTimer = null;
 
   function resetTimedRoundClock() {
     if (gameMode === 'solo') return;
@@ -12,10 +11,8 @@
     if ($('timer')) $('timer').textContent = typeof formatTime === 'function' ? formatTime(ROUND_TIME) : '02:00';
   }
 
-  // Reset the clock as soon as any new timed round is requested, including programmatic AI restarts.
   $('startBtn')?.addEventListener('click', resetTimedRoundClock, true);
 
-  // Also guarantee the reset at the engine boundary in case another script starts a round directly.
   const priorStartGame = startGame;
   startGame = function() {
     if (gameMode !== 'solo') resetTimedRoundClock();
@@ -54,10 +51,9 @@
     return tile;
   }
 
-  function mirrorAIBoard() {
+  function showAITile() {
     const active = !!window.TBAIMode && gameMode === 'duel' && !game.classList.contains('hidden');
     const existing = $('live-ai-rival');
-
     if (!active) {
       existing?.remove();
       return;
@@ -67,21 +63,10 @@
     if (!grid) return;
     grid.classList.remove('party');
     grid.classList.add('duel');
-
-    // The generic live grid creates a waiting tile when there is no Firebase rival.
-    // AI mode replaces that placeholder with the CPU board.
     $('live-waiting')?.remove();
 
     const tile = ensureAITile();
     if (!tile) return;
-    const src = $('rivalBoard');
-    const dst = tile.querySelector('canvas');
-    if (src && dst) {
-      const ctx = dst.getContext('2d');
-      ctx.clearRect(0, 0, dst.width, dst.height);
-      ctx.drawImage(src, 0, 0, dst.width, dst.height);
-    }
-
     const ko = Number($('rivalKO')?.textContent || 0);
     tile.querySelector('.live-ko').textContent = `${ko} / 5 KO`;
     tile.querySelector('strong').textContent = ($('rivalName')?.textContent || 'AI RIVAL').toUpperCase();
@@ -103,12 +88,11 @@
   `;
   document.head.appendChild(style);
 
-  // Keep the mirrored board in sync with the CPU engine without changing its battle logic.
-  aiMirrorTimer = setInterval(mirrorAIBoard, 100);
+  setInterval(showAITile, 100);
 
   $('battleAIBtn')?.addEventListener('click', () => {
     resetTimedRoundClock();
-    setTimeout(mirrorAIBoard, 30);
+    setTimeout(showAITile, 30);
   });
 
   $('quitBtn')?.addEventListener('click', () => setTimeout(() => {
@@ -116,5 +100,5 @@
     if (!window.TBAIMode && gameMode !== 'solo') $('startBtn')?.classList.add('hidden');
   }, 30));
 
-  window.TBAIHotfix = { mirrorAIBoard, resetTimedRoundClock };
+  window.TBAIHotfix = { showAITile, resetTimedRoundClock };
 })();
