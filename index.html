@@ -36,7 +36,7 @@
       <div class="mode-grid">
         <button class="mode-card active" data-mode="duel">
           <span class="mode-icon">♛</span><strong>1v1 Knockout</strong>
-          <small>Ranked battle. Winner keeps the crown, earns stars, and waits for the next challenger.</small>
+          <small>Ranked battle. First to 5 KOs wins. Garbage can be countered before it rises.</small>
         </button>
         <button class="mode-card" data-mode="party">
           <span class="mode-icon">✦</span><strong>Party Session</strong>
@@ -54,7 +54,7 @@
         <button id="joinRoomBtn">Join Room</button>
       </div>
       <div id="roomStatus" class="status">Create a room to generate a code.</div>
-      <p class="fineprint">Game board, scoring, hold, ghost preview, arcade music, SFX, rank stars, animated battle effects and session history work now. Real cross-device opponents and live standings will activate when we connect the multiplayer backend.</p>
+      <p class="fineprint">1v1 now has incoming garbage, countering, KO recovery and first-to-5 scoring. For multiplayer testing today, open the same room code in a second tab/window on this browser. Cross-device phone multiplayer is the next backend step.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
@@ -125,5 +125,7 @@
   <script src="audio-v6.js?v=6"></script>
   <script src="rank-v7.js?v=7"></script>
   <script src="interaction-v8.js?v=8"></script>
+  <script src="multiplayer-v1.js?v=1"></script>
+  <script src="battle-v9.js?v=9"></script>
 </body>
 </html>
