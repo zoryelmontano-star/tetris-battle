@@ -3,9 +3,9 @@
   "short_name": "Tetris Battle",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0b0e13",
-  "theme_color": "#10131a",
-  "description": "A 60-second Tetris battle prototype.",
+  "background_color": "#171419",
+  "theme_color": "#171419",
+  "description": "A two-minute arcade Tetris battle with combos, perfect clears, music and session records.",
   "icons": [
     {
       "src": "icon.svg",
