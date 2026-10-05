@@ -9,22 +9,28 @@
     return gameMode === 'duel' && !game.classList.contains('hidden');
   }
 
-  function ensureMeter() {
-    const shell = $('localLiveTile')?.querySelector('.board-shell') || document.querySelector('#arenaCard .board-shell');
-    if (!shell) return null;
-    let meter = $('outgoingAttackMeter');
-    if (meter && meter.parentElement !== shell) meter.remove();
-    meter = $('outgoingAttackMeter');
-    if (meter) return meter;
+  function meterHost() {
+    const next = $('localLiveTile')?.querySelector('.next-panel') || document.querySelector('#arenaCard .next-panel');
+    const crown = next?.querySelector('.streak-box');
+    return { next, crown };
+  }
 
-    meter = document.createElement('div');
-    meter.id = 'outgoingAttackMeter';
-    meter.className = 'outgoing-attack-meter hidden';
-    meter.innerHTML = `
-      <div class="outgoing-label">SEND</div>
-      <div class="outgoing-count" id="outgoingAttackCount">0</div>
-      <div class="outgoing-stack" id="outgoingAttackStack" aria-label="Outgoing garbage lines"></div>`;
-    shell.appendChild(meter);
+  function ensureMeter() {
+    const { next, crown } = meterHost();
+    if (!next) return null;
+    let meter = $('outgoingAttackMeter');
+    if (!meter) {
+      meter = document.createElement('div');
+      meter.id = 'outgoingAttackMeter';
+      meter.className = 'outgoing-attack-meter hidden';
+      meter.innerHTML = `
+        <div class="outgoing-top"><span class="outgoing-label">SEND</span><b class="outgoing-count" id="outgoingAttackCount">0</b></div>
+        <div class="outgoing-stack" id="outgoingAttackStack" aria-label="Outgoing garbage lines"></div>`;
+    }
+    if (meter.parentElement !== next) {
+      if (crown) crown.insertAdjacentElement('afterend', meter);
+      else next.appendChild(meter);
+    }
     return meter;
   }
 
@@ -63,7 +69,6 @@
     pendingVisual += n;
     renderMeter();
     clearTimeout(clearTimer);
-    // Keep the stack visible long enough to read; consecutive clears accumulate.
     clearTimer = setTimeout(() => {
       pendingVisual = 0;
       renderMeter();
@@ -92,17 +97,21 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .board-shell{overflow:visible!important}
-    .outgoing-attack-meter{position:absolute;right:7px;bottom:7px;z-index:7;width:31px;padding:5px 4px 6px;border-radius:10px;background:rgba(14,12,15,.82);border:1px solid rgba(229,190,111,.32);box-shadow:0 7px 20px rgba(0,0,0,.34);backdrop-filter:blur(4px);pointer-events:none}
+    .outgoing-attack-meter{position:static!important;width:100%;margin-top:7px;padding:7px;border-radius:11px;background:linear-gradient(180deg,#171318,#0f0d10);border:1px solid rgba(229,190,111,.28);box-shadow:inset 0 1px rgba(255,255,255,.035);pointer-events:none}
     .outgoing-attack-meter.hidden{display:none!important}
-    .outgoing-label{font-size:6px;font-weight:1000;letter-spacing:.11em;text-align:center;color:#bcae9b;margin-bottom:2px}
-    .outgoing-count{text-align:center;font-size:11px;line-height:1;font-weight:1000;color:#eed18d;margin-bottom:4px;text-shadow:0 2px 6px rgba(0,0,0,.45)}
-    .outgoing-stack{height:118px;display:flex;flex-direction:column-reverse;gap:2px}
-    .outgoing-stack i{flex:1;min-height:4px;border-radius:2px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.045);transition:background .12s ease,transform .12s ease,box-shadow .12s ease}
-    .outgoing-stack i.filled{background:linear-gradient(180deg,#e3c574,#b88b46);border-color:rgba(255,230,162,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 6px rgba(218,171,84,.18);transform:scaleX(1.04)}
-    .outgoing-attack-meter.hot .outgoing-stack i.filled{background:linear-gradient(180deg,#dc9b70,#ba665c)}
-    .outgoing-attack-meter.danger .outgoing-stack i.filled{background:linear-gradient(180deg,#df7f84,#a94d60);box-shadow:0 0 7px rgba(215,91,108,.25)}
-    @media(max-width:720px){.outgoing-attack-meter{right:4px;bottom:4px;width:27px;padding:4px 3px 5px}.outgoing-stack{height:94px}.outgoing-count{font-size:10px}.outgoing-label{font-size:5px}}
+    .outgoing-top{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:5px}
+    .outgoing-label{font-size:7px;font-weight:1000;letter-spacing:.12em;color:#bcae9b}
+    .outgoing-count{font-size:13px;line-height:1;font-weight:1000;color:#eed18d;text-shadow:0 2px 6px rgba(0,0,0,.45)}
+    .outgoing-stack{display:flex;flex-direction:column-reverse;gap:2px;height:72px}
+    .outgoing-stack i{flex:1;min-height:3px;border-radius:2px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.04);transition:background .12s ease,transform .12s ease,box-shadow .12s ease}
+    .outgoing-stack i.filled{background:linear-gradient(90deg,#b88b46,#e3c574);border-color:rgba(255,230,162,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 5px rgba(218,171,84,.16);transform:scaleX(1.03)}
+    .outgoing-attack-meter.hot .outgoing-stack i.filled{background:linear-gradient(90deg,#ba665c,#dc9b70)}
+    .outgoing-attack-meter.danger .outgoing-stack i.filled{background:linear-gradient(90deg,#a94d60,#df7f84);box-shadow:0 0 7px rgba(215,91,108,.22)}
+    @media(max-width:720px){
+      .live-arena-grid.duel .local-live-tile .next-panel{display:block!important;width:100%!important;max-width:300px!important;margin:7px auto 0!important}
+      .live-arena-grid.duel .local-live-tile .next-panel .next-card{display:none!important}
+      .outgoing-stack{height:54px}
+    }
   `;
   document.head.appendChild(style);
 
