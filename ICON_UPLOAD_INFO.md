@@ -1,0 +1,1 @@
+The repository includes icon.svg plus base64 source files for the generated PNG icons. The game itself is fully usable without the PNG icons; GitHub Pages deployment is the remaining step.
