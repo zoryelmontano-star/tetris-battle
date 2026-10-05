@@ -91,7 +91,6 @@
 
     if (!holdType) {
       holdType = outgoing;
-      // Pull the next piece without placing the held piece.
       current = queue.shift() || makePiece();
       current.x = Math.floor(COLS / 2) - Math.ceil(current.shape[0].length / 2);
       current.y = 0;
@@ -125,8 +124,9 @@
   startGame = function () {
     holdType = null;
     holdLocked = false;
+    const result = originalStartGame();
     renderHold();
-    return originalStartGame();
+    return result;
   };
 
   const originalOpenGame = openGame;
