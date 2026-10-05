@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#10131a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tetris Battle" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Tetris Battle</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">FREE PWA PROTOTYPE</p>
+        <h1>Tetris Battle</h1>
+      </div>
+      <button id="installBtn" class="ghost hidden">Install App</button>
+    </header>
+
+    <section id="lobby" class="card lobby">
+      <div class="lobby-copy">
+        <h2>Quick Battle</h2>
+        <p>1-minute round. Highest score wins. Your best score and wins are saved on this device.</p>
+      </div>
+
+      <div class="lobby-grid">
+        <label>
+          Player name
+          <input id="playerName" maxlength="16" value="Player 1" />
+        </label>
+        <label>
+          Room code
+          <input id="roomCode" maxlength="6" placeholder="ABC123" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="createRoomBtn" class="primary">Create Room</button>
+        <button id="joinRoomBtn">Join Room</button>
+      </div>
+
+      <div id="roomStatus" class="status">Create a room to generate a code.</div>
+      <p class="fineprint">This first build is fully playable offline. Cross-device multiplayer is the next layer and needs a free backend connection.</p>
+    </section>
+
+    <section id="game" class="game-layout hidden">
+      <div class="card game-card">
+        <div class="hud">
+          <div><span>TIME</span><strong id="timer">60</strong></div>
+          <div><span>SCORE</span><strong id="score">0</strong></div>
+          <div><span>COMBO</span><strong id="combo">0</strong></div>
+        </div>
+
+        <div class="board-wrap">
+          <canvas id="board" width="300" height="600" aria-label="Tetris board"></canvas>
+          <div id="overlay" class="overlay">
+            <h2 id="overlayTitle">Ready?</h2>
+            <p id="overlayText">Tap Start Battle.</p>
+          </div>
+        </div>
+
+        <div class="game-actions">
+          <button id="startBtn" class="primary">Start Battle</button>
+          <button id="leaveBtn">Back to Lobby</button>
+        </div>
+
+        <div class="touch-controls" aria-label="Touch controls">
+          <button data-action="left">◀</button>
+          <button data-action="rotate">⟳</button>
+          <button data-action="right">▶</button>
+          <button data-action="down">▼</button>
+          <button data-action="drop" class="wide">DROP</button>
+        </div>
+
+        <p class="controls-note">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop</p>
+      </div>
+
+      <aside class="card side-card">
+        <h3>Room</h3>
+        <div class="room-code-big" id="roomCodeDisplay">------</div>
+        <div class="player-row">
+          <span id="playerLabel">Player 1</span>
+          <b id="playerState">Waiting</b>
+        </div>
+
+        <hr />
+
+        <h3>Local Record</h3>
+        <div class="record-grid">
+          <div><span>Best</span><strong id="bestScore">0</strong></div>
+          <div><span>Wins</span><strong id="wins">0</strong></div>
+        </div>
+
+        <div id="championBanner" class="champion hidden">
+          🏆 New local champion!
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
