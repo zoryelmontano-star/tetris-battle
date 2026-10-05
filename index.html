@@ -54,7 +54,7 @@
         <button id="joinRoomBtn">Join Room</button>
       </div>
       <div id="roomStatus" class="status">Create a room to generate a code.</div>
-      <p class="fineprint">Game board, scoring, music, session history and battle UI work now. Cross-device opponents, live queue and garbage transfer will activate when we connect the free multiplayer backend.</p>
+      <p class="fineprint">Game board, scoring, music, session history, hold and ghost preview work now. Cross-device opponents, live queue and garbage transfer will activate when we connect the free multiplayer backend.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
@@ -101,7 +101,7 @@
           <button id="startBtn" class="primary">Start Battle</button>
           <button id="quitBtn" class="danger">Quit</button>
         </div>
-        <p class="controls-note">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause</p>
+        <p class="controls-note">Keyboard: ← → move · ↑ rotate · ↓ soft drop · Space hard drop · C/H hold · P pause</p>
       </div>
 
       <aside class="card side-card">
@@ -121,5 +121,6 @@
     </section>
   </main>
   <script src="app.js?v=3"></script>
+  <script src="hold-ghost.js?v=4"></script>
 </body>
 </html>
