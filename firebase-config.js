@@ -1,9 +1,8 @@
 // Firebase Web App configuration for Tetris Battle.
-// Realtime Database URL will be added after the database is created in Firebase Console.
 window.TB_FIREBASE_CONFIG = {
   apiKey: "AIzaSyD1Y87-C_adwQPPEcRztqGo9YkBUvSf66E",
   authDomain: "tetris-battle-z.firebaseapp.com",
-  databaseURL: "",
+  databaseURL: "https://tetris-battle-z-default-rtdb.firebaseio.com/",
   projectId: "tetris-battle-z",
   storageBucket: "tetris-battle-z.firebasestorage.app",
   messagingSenderId: "826935840646",
