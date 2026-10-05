@@ -1,0 +1,24 @@
+/* v19: mode chooser and setup are separate screens */
+#modeSetupScreen{position:relative;z-index:4;max-width:590px;margin:0 auto;padding:4px 0 2px}
+#modeSetupScreen.hidden{display:none!important}
+#modeSetupScreen .setup-top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+#modeSetupScreen .back-modes-btn{min-height:42px;padding:0 14px;border-radius:13px;background:#1b171c;border:1px solid #493d48;color:#eaded8;font-weight:850}
+#modeSetupScreen .setup-heading{min-width:0}
+#modeSetupScreen .setup-heading strong{display:block;font-size:22px;line-height:1.15;color:#fff5ee}
+#modeSetupScreen .setup-heading small{display:block;margin-top:4px;color:#a99aa3;font-size:11px;line-height:1.45}
+#modeSetupScreen .setup-mode-badge{width:48px;height:48px;display:grid;place-items:center;flex:0 0 48px;border-radius:15px;border:1px solid rgba(255,255,255,.16);font-size:22px;font-weight:1000;box-shadow:inset 0 2px 0 rgba(255,255,255,.12)}
+#modeSetupScreen[data-mode=duel] .setup-mode-badge{background:linear-gradient(180deg,#bf7681,#8e505b)}
+#modeSetupScreen[data-mode=party] .setup-mode-badge{background:linear-gradient(180deg,#8b78a5,#63547a)}
+#modeSetupScreen[data-mode=solo] .setup-mode-badge{background:linear-gradient(180deg,#7ca27a,#557351)}
+#lobby.setup-open #baseLandingHero,#lobby.setup-open>.mode-grid{display:none!important}
+#lobby.setup-open{padding-top:24px}
+#lobby:not(.setup-open) #modeSetupScreen{display:none!important}
+#lobby:not(.setup-open) .mode-card{box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 10px 24px rgba(0,0,0,.22)!important}
+#lobby:not(.setup-open) .mode-card.active{box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 10px 24px rgba(0,0,0,.22)!important}
+#modeSetupScreen .lobby-grid,#modeSetupScreen #duelQuickPanel,#modeSetupScreen .actions,#modeSetupScreen #roomStatus,#modeSetupScreen #recentRoomsPanel,#modeSetupScreen #soloOptions,#modeSetupScreen .fineprint{max-width:none!important;margin-left:0!important;margin-right:0!important}
+#modeSetupScreen[data-mode=duel] .party-only,#modeSetupScreen[data-mode=duel] #recentRoomsPanel,#modeSetupScreen[data-mode=duel] #soloOptions{display:none!important}
+#modeSetupScreen[data-mode=party] #duelQuickPanel,#modeSetupScreen[data-mode=party] #soloOptions{display:none!important}
+#modeSetupScreen[data-mode=solo] #duelQuickPanel,#modeSetupScreen[data-mode=solo] .party-only,#modeSetupScreen[data-mode=solo] #playerNameField,#modeSetupScreen[data-mode=solo] #roomStatus,#modeSetupScreen[data-mode=solo] #recentRoomsPanel{display:none!important}
+#modeSetupScreen[data-mode=solo] #soloOptions{display:block!important}
+#modeSetupScreen[data-mode=duel] #roomStatus{display:block!important}
+@media(max-width:650px){#modeSetupScreen{padding-top:0}#modeSetupScreen .setup-top{align-items:flex-start;flex-wrap:wrap}.back-modes-btn{order:3;width:100%}.setup-heading strong{font-size:20px}}
