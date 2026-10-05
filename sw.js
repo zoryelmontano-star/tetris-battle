@@ -1,4 +1,4 @@
-const CACHE='tetris-battle-v20';
+const CACHE='tetris-battle-v21';
 const ASSETS=['./','index.html','styles.css?v=3','landing-v18.css?v=18','lobby-flow-v19.css?v=19','app.js?v=3','hold-ghost.js?v=4','audio-v6.js?v=6','rank-v7.js?v=7','interaction-v8.js?v=8','firebase-config.js?v=2','multiplayer-v1.js?v=3','battle-v9.js?v=9','battle-hotfix-v9.js?v=1','live-grid-v10.js?v=10','ready-v11.js?v=11','solo-v13.js?v=13','ux-v14.js?v=14','timing-v16.js?v=16','lobby-v18.js?v=18','firebase-ui-v17.js?v=17','lobby-flow-v19.js?v=19','manifest.webmanifest','icon.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
