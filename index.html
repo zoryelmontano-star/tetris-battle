@@ -40,28 +40,28 @@
         </button>
         <button class="mode-card" data-mode="party">
           <span class="mode-icon">✦</span><strong>Party Session</strong>
-          <small>2–8 players. Two-minute score race with no attacks. Round winner earns one session win.</small>
+          <small>2–6 players. Two-minute score race with no attacks. Round winner earns one session win.</small>
         </button>
       </div>
 
       <div class="lobby-grid">
         <label>Player name<input id="playerName" maxlength="16" value="Player 1" /></label>
-        <label>Room code<input id="roomCode" maxlength="6" placeholder="ABC123" /></label>
+        <label>Room code<input id="roomCode" maxlength="12" placeholder="MONTANO" /></label>
       </div>
 
       <div class="actions">
         <button id="createRoomBtn" class="primary">Create Room</button>
         <button id="joinRoomBtn">Join Room</button>
       </div>
-      <div id="roomStatus" class="status">Create a room or join with a code.</div>
-      <p class="fineprint">1v1 uses first-to-5 KO battle rules. Party is a 2-minute no-attack score race with all live boards visible. Solo adds Sprint 40 Lines and Marathon. Rooms can use custom names and custom codes. Same-browser tabs are the current multiplayer transport while cross-device realtime backend is being connected.</p>
+      <div id="roomStatus" class="status">Create or join a Party room.</div>
+      <p class="fineprint">2P Battle uses automatic opponent matching with no room code. Party is a 2-minute no-attack score race for up to 6 players with all live boards visible. Solo includes Sprint 40 Lines and Marathon.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
       <div class="arena-card card" id="arenaCard">
         <div class="battle-strip">
           <div class="player-badge"><span class="avatar">P1</span><div><small>PLAYER</small><strong id="playerLabel">Player 1</strong></div></div>
-          <div class="mode-pill" id="modePill">1v1 KNOCKOUT</div>
+          <div class="mode-pill" id="modePill">2P BATTLE</div>
           <div class="room-pill">ROOM <b id="roomCodeDisplay">------</b></div>
         </div>
 
@@ -79,7 +79,7 @@
             <div id="gameToast" class="game-toast hidden"><strong id="toastTitle"></strong><span id="toastSub"></span></div>
             <div id="overlay" class="overlay">
               <h2 id="overlayTitle">Ready?</h2>
-              <p id="overlayText">Two-minute battle. Clear fast and build combos.</p>
+              <p id="overlayText">Knock out your opponent! First to 5 KOs wins.</p>
             </div>
           </div>
 
@@ -125,7 +125,8 @@
   <script src="audio-v6.js?v=6"></script>
   <script src="rank-v7.js?v=7"></script>
   <script src="interaction-v8.js?v=8"></script>
-  <script src="multiplayer-v1.js?v=2"></script>
+  <script src="firebase-config.js?v=1"></script>
+  <script src="multiplayer-v1.js?v=3"></script>
   <script src="battle-v9.js?v=9"></script>
   <script src="battle-hotfix-v9.js?v=1"></script>
   <script src="live-grid-v10.js?v=10"></script>
@@ -133,5 +134,7 @@
   <script src="room-v12.js?v=12"></script>
   <script src="solo-v13.js?v=13"></script>
   <script src="ux-v14.js?v=14"></script>
+  <script src="landing-v15.js?v=15"></script>
+  <script src="timing-v16.js?v=16"></script>
 </body>
 </html>
