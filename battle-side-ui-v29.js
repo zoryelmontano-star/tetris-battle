@@ -8,13 +8,14 @@
     c.clearRect(0,0,canvas.width,canvas.height);
     const bg=c.createLinearGradient(0,0,0,canvas.height);bg.addColorStop(0,'#171742');bg.addColorStop(1,'#090a20');
     c.fillStyle=bg;c.fillRect(0,0,canvas.width,canvas.height);
-    if(!type||!window.SHAPES?.[type])return;
-    const shape=SHAPES[type], cell=15;
+    const shapes = typeof SHAPES!=='undefined' ? SHAPES : null;
+    if(!type||!shapes?.[type])return;
+    const shape=shapes[type], cell=15;
     const w=shape[0].length*cell,h=shape.length*cell;
     const ox=Math.floor((canvas.width-w)/2),oy=Math.floor((canvas.height-h)/2);
     shape.forEach((row,y)=>row.forEach((v,x)=>{
       if(!v)return;
-      const color=COLORS[type]||'#7ccfff';
+      const color=(typeof COLORS!=='undefined'&&COLORS[type])||'#7ccfff';
       const px=ox+x*cell,py=oy+y*cell;
       const g=c.createLinearGradient(px,py,px+cell,py+cell);
       g.addColorStop(0,typeof adjust==='function'?adjust(color,32):color);
@@ -85,7 +86,6 @@
   function updateAI(){
     const tile=$('live-ai-rival');if(!tile)return;
     const side=ensureRemoteSide(tile);if(!side)return;
-    // Current AI does not use HOLD, so show an honest empty slot instead of faking a held piece.
     drawHold(side.querySelector('canvas'),'');
     side.querySelector('.hold-ko-value').textContent=Number($('rivalKO')?.textContent||0);
     side.querySelector('.hold-sent-value').textContent=Number(window.TBAIStats?.linesSent||0);
@@ -107,7 +107,6 @@
 
   const style=document.createElement('style');
   style.textContent=`
-    /* Retire v27 floating rail completely. */
     .battle-stat-rail{display:none!important}
     .hidden-battle-side{display:none!important}
     .hold-panel{overflow:visible!important}
