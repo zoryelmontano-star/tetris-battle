@@ -1,139 +1,138 @@
-// v43: Solo has no Ready button. Start Solo opens the board, runs READY? 3-2-1-GO, then starts automatically.
+// v45: deterministic Solo start. No Ready button; Start Solo -> READY? -> 3 -> 2 -> 1 -> GO! -> play.
 (() => {
   const $ = id => document.getElementById(id);
+  let starting = false;
   let countdownToken = 0;
-  let soloStarting = false;
 
-  function prepareSoloUI(){
-    try { gameMode = 'solo'; } catch {}
-    try { localStorage.setItem('tb_mode','solo'); } catch {}
-    $('soloOptions')?.classList.remove('hidden');
-    document.querySelectorAll('.mode-card').forEach(card => card.classList.toggle('active', card.dataset.mode === 'solo'));
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  function soloType(){
+    return localStorage.getItem('tb_solo_type') === 'marathon' ? 'marathon' : 'sprint';
   }
 
-  function normalizeSoloGameUI(){
+  function prepareSolo(){
+    try { gameMode = 'solo'; } catch {}
+    try { localStorage.setItem('tb_mode','solo'); } catch {}
+    document.querySelectorAll('.mode-card').forEach(card => card.classList.toggle('active', card.dataset.mode === 'solo'));
+    $('soloOptions')?.classList.remove('hidden');
+  }
+
+  function normalizeSoloUI(){
     const gameEl = $('game');
-    if (!gameEl || gameEl.classList.contains('hidden')) return false;
+    if (!gameEl) return;
     gameEl.classList.add('solo-live-mode');
     document.querySelector('.room-pill')?.classList.add('hidden');
     $('readyBtn')?.classList.add('hidden');
     $('readyPanel')?.classList.add('hidden');
     $('hostStartBtn')?.classList.add('hidden');
     $('startSoloGameBtn')?.classList.add('hidden');
-    $('startBtn')?.classList.add('hidden');
     $('duelMonitor')?.classList.add('hidden');
     $('partyStandings')?.classList.add('hidden');
+    $('soloStatus')?.classList.remove('hidden');
+
     const grid = $('liveArenaGrid');
     if (grid) {
       grid.classList.add('solo');
       grid.classList.remove('duel','party');
       grid.querySelectorAll('.remote-live-tile').forEach(x => x.remove());
     }
-    $('soloStatus')?.classList.remove('hidden');
+
     if ($('roomCodeDisplay')) $('roomCodeDisplay').textContent = 'SOLO';
-    if ($('playerState')) $('playerState').textContent = (typeof gameRunning !== 'undefined' && gameRunning) ? 'Playing' : (soloStarting ? 'Starting' : 'Solo');
-    return true;
+    if ($('modePill')) $('modePill').textContent = soloType() === 'marathon' ? 'SOLO MARATHON' : 'SOLO SPRINT 40L';
+    if ($('playerState')) $('playerState').textContent = starting ? 'Get Ready' : ((typeof gameRunning !== 'undefined' && gameRunning) ? 'Playing' : 'Solo');
   }
 
-  function openSoloIfNeeded(){
-    prepareSoloUI();
-    const gameEl = $('game');
-    if (gameEl?.classList.contains('hidden')) {
-      try { openGame('SOLO'); } catch (err) { console.error('Solo open failed', err); return false; }
+  function openSoloBoard(){
+    prepareSolo();
+    try {
+      if ($('game')?.classList.contains('hidden')) openGame('SOLO');
+    } catch (err) {
+      console.error('Solo open failed', err);
+      return false;
     }
     try { window.TBMultiplayer?.disconnect?.(); } catch {}
-    normalizeSoloGameUI();
+    normalizeSoloUI();
     return true;
   }
 
-  function pulseOverlay(title, text='Get ready for your solo run.'){
-    const ov = $('overlay');
-    const t = $('overlayTitle');
-    const p = $('overlayText');
-    if (!ov || !t || !p) return;
-    t.textContent = title;
-    p.textContent = text;
-    ov.classList.remove('hidden');
-    t.style.animation = 'none';
-    void t.offsetWidth;
-    t.style.animation = '';
-  }
-
-  function wait(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
-
-  async function runSoloCountdown(){
+  async function showCountdown(){
     const token = ++countdownToken;
-    soloStarting = true;
-    if (!openSoloIfNeeded()) { soloStarting = false; return; }
-    normalizeSoloGameUI();
+    const ov = $('overlay');
+    const title = $('overlayTitle');
+    const text = $('overlayText');
+    if (!ov || !title) return false;
 
-    try {
-      // Make sure no prior run is active while the countdown is showing.
-      if (typeof gameRunning !== 'undefined' && gameRunning) {
-        gameRunning = false;
-        try { clearInterval(timerInterval); } catch {}
-        try { cancelAnimationFrame(animationId); } catch {}
-        try { if (typeof stopMusic === 'function') stopMusic(); } catch {}
-      }
-    } catch {}
-
-    pulseOverlay('READY?','Your solo run starts automatically.');
-    await wait(550);
-    if (token !== countdownToken || gameMode !== 'solo') return;
+    ov.classList.remove('hidden');
+    title.textContent = 'READY?';
+    if (text) text.textContent = soloType() === 'marathon' ? 'Survive all 15 levels.' : 'Clear 40 lines as fast as you can.';
+    await wait(700);
 
     for (const n of ['3','2','1']) {
-      pulseOverlay(n,'Get ready…');
+      if (token !== countdownToken) return false;
+      title.textContent = n;
+      if (text) text.textContent = '';
       await wait(1000);
-      if (token !== countdownToken || gameMode !== 'solo') return;
     }
 
-    pulseOverlay('GO!','');
-    await wait(500);
-    if (token !== countdownToken || gameMode !== 'solo') return;
+    if (token !== countdownToken) return false;
+    title.textContent = 'GO!';
+    if (text) text.textContent = '';
+    await wait(450);
+    return token === countdownToken;
+  }
+
+  async function beginSolo(){
+    if (starting) return;
+    starting = true;
+    prepareSolo();
+    if (!openSoloBoard()) { starting = false; return; }
+
+    // Keep gameplay stopped while the countdown is visible.
+    try {
+      if (typeof gameRunning !== 'undefined') gameRunning = false;
+      if (typeof paused !== 'undefined') paused = false;
+      if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+      if (typeof animationId !== 'undefined') cancelAnimationFrame(animationId);
+    } catch {}
+    normalizeSoloUI();
+
+    const okay = await showCountdown();
+    if (!okay) { starting = false; return; }
 
     try {
       startGame();
-      soloStarting = false;
-      normalizeSoloGameUI();
       $('overlay')?.classList.add('hidden');
       if ($('playerState')) $('playerState').textContent = 'Playing';
     } catch (err) {
-      soloStarting = false;
-      console.error('Solo auto-start failed', err);
+      console.error('Solo start failed', err);
+    } finally {
+      starting = false;
+      normalizeSoloUI();
     }
   }
 
+  // Choice buttons should always visibly select Sprint/Marathon.
   document.addEventListener('click', event => {
-    const soloCard = event.target?.closest?.('#soloModeCard,.mode-card[data-mode="solo"]');
-    if (soloCard) {
-      countdownToken++;
-      soloStarting = false;
-      prepareSoloUI();
-      setTimeout(() => {
-        prepareSoloUI();
-        window.TBModeFlow?.showSetup?.('solo', false);
-      }, 150);
-      return;
-    }
+    const choice = event.target?.closest?.('.solo-choice[data-solo]');
+    if (!choice) return;
+    const type = choice.dataset.solo === 'marathon' ? 'marathon' : 'sprint';
+    localStorage.setItem('tb_solo_type', type);
+    document.querySelectorAll('.solo-choice').forEach(btn => btn.classList.toggle('active', btn === choice));
+  }, true);
 
+  // Own the Start Solo action so older listeners cannot leave the user stuck on setup.
+  document.addEventListener('click', event => {
     const start = event.target?.closest?.('#startSoloBtn');
-    if (start) {
-      prepareSoloUI();
-      // Let Solo's original click handler select/open Sprint or Marathon first.
-      setTimeout(runSoloCountdown, 40);
-      return;
-    }
+    if (!start) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    beginSolo();
+  }, true);
 
-    if (event.target?.closest?.('#quitBtn,[data-touch-action="quit"]')) {
-      countdownToken++;
-      soloStarting = false;
-    }
-  }, false);
-
+  // Solo never exposes Ready controls, even if older multiplayer scripts repaint them.
   new MutationObserver(() => {
     if (typeof gameMode === 'undefined' || gameMode !== 'solo') return;
-    const gameEl = $('game');
-    if (!gameEl || gameEl.classList.contains('hidden')) return;
-    normalizeSoloGameUI();
+    normalizeSoloUI();
   }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
 })();
