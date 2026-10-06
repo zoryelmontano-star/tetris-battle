@@ -1,4 +1,4 @@
-// v28: 2P mutual-ready flow; Party host starts manually or auto-starts after 60 seconds.
+// v46: 1v1 mutual-ready flow; Battle Arena host starts manually or auto-starts after 60 seconds.
 (() => {
   const $ = id => document.getElementById(id);
   const actions = document.querySelector('.bottom-actions');
@@ -22,6 +22,8 @@
   function partyHost(){ return gameMode === 'party' && !!roomCode() && hostRooms().has(roomCode()); }
   function localId(){ return String(window.TBMultiplayer?.playerId || 'local'); }
   function localName(){ return (($('playerName')?.value || 'Player').trim().slice(0,16) || 'Player'); }
+  function isBattleMode(){ return gameMode === 'duel' || gameMode === 'party'; }
+  function gameVisible(){ const g=$('game'); return !!g && !g.classList.contains('hidden') && getComputedStyle(g).display!=='none'; }
 
   window.TBReadyState = {
     get localReady(){ return localReady; },
@@ -67,6 +69,7 @@
     .battlefield-countdown::before,.battlefield-countdown::after{content:'';position:absolute;width:58%;height:58%;border-radius:50%;filter:blur(60px);opacity:.35}.battlefield-countdown::before{left:-18%;top:-12%;background:#55e7ff}.battlefield-countdown::after{right:-18%;bottom:-18%;background:#ff63b6}
     .battlefield-countdown-inner{position:relative;z-index:2;text-align:center}.battlefield-countdown-inner p{margin:0 0 6px;color:#91efff;font-size:clamp(11px,2vw,18px);font-weight:1000;letter-spacing:.2em}.battlefield-countdown-inner strong{display:block;color:#fff;font-size:clamp(72px,16vw,190px);line-height:.88;font-weight:1000;letter-spacing:-.06em;text-shadow:0 8px 0 rgba(34,26,93,.65),0 0 35px rgba(92,224,255,.28);animation:fieldCountPop .7s ease both}.battlefield-countdown.go .battlefield-countdown-inner strong{color:#fff175;text-shadow:0 8px 0 rgba(112,58,57,.55),0 0 40px rgba(255,226,83,.42)}
     @keyframes fieldCountPop{0%{opacity:0;transform:scale(.5)}45%{opacity:1;transform:scale(1.14)}100%{opacity:1;transform:scale(1)}}
+    #game.solo-live-mode #readyBtn,#game.solo-live-mode #readyPanel,#game.solo-live-mode #hostStartBtn{display:none!important}
   `;
   document.head.appendChild(style);
 
@@ -99,7 +102,7 @@
   }
 
   function setLocalReady(value,broadcast=true){
-    if(roundLive)return;
+    if(!isBattleMode() || roundLive)return;
     localReady=gameMode==='party'&&partyHost()?false:!!value;
     readyBtn.textContent=localReady?'READY ✓':'READY';
     readyBtn.classList.toggle('is-ready',localReady);
@@ -126,7 +129,6 @@
       return parts.join('');
     }
 
-    // Guest view: identify the announced host, then show this guest and other guests separately.
     const hostEntry=remotes.find(([id])=>String(id)===knownPartyHostId);
     if(hostEntry){ parts.push(`<span class="ready-person host"><i class="ready-dot"></i>${escapeHtml(hostEntry[1].name||knownPartyHostName)} · HOST</span>`); }
     else if(knownPartyHostName){ parts.push(`<span class="ready-person host"><i class="ready-dot"></i>${escapeHtml(knownPartyHostName)} · HOST</span>`); }
@@ -153,7 +155,16 @@
     }
   }
 
+  function hideReadyUI(){
+    readyBtn.classList.add('hidden');
+    hostStartBtn.classList.add('hidden');
+    panel.classList.add('hidden');
+    fieldCountdown.classList.add('hidden');
+  }
+
   function renderReady(){
+    if(!isBattleMode() || !gameVisible()) { hideReadyUI(); return; }
+    panel.classList.remove('hidden');
     const remotes=requiredPlayers();
     const host=gameMode==='party'&&partyHost();
     readyBtn.classList.toggle('hidden',host||window.TBAIMode===true);
@@ -227,13 +238,13 @@
   new MutationObserver(syncFullFieldCountdown).observe($('overlayTitle'),{childList:true,characterData:true,subtree:true});
 
   function scheduleRound(token,startAt){
-    if(!token||scheduledToken===token||roundLive)return;
+    if(!isBattleMode()||!token||scheduledToken===token||roundLive)return;
     scheduledToken=token;
     const delay=Math.max(0,Number(startAt||Date.now())-Date.now());
     $('readyMessage').textContent='Starting together…';
     if(gameMode==='party')showFullFieldReady();
     setTimeout(()=>{
-      if(roundLive)return;
+      if(roundLive||!isBattleMode())return;
       roundLive=true; localReady=false; partyDeadline=0;
       readyBtn.classList.remove('is-ready'); $('localLiveTile')?.classList.remove('ready-now');
       startBtn.classList.remove('hidden'); startBtn.click(); startBtn.classList.add('hidden');
@@ -242,7 +253,7 @@
   }
 
   function broadcastStart(reason='manual'){
-    if(roundLive||!window.TBMultiplayer?.room||requiredPlayers().length<1)return;
+    if(!isBattleMode()||roundLive||!window.TBMultiplayer?.room||requiredPlayers().length<1)return;
     const token=`${TBMultiplayer.room}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
     const startAt=Date.now()+750;
     TBMultiplayer.send('round_start',{token,startAt,mode:gameMode,reason});
@@ -250,6 +261,7 @@
   }
 
   function maybeStart(){
+    if(!isBattleMode()||!gameVisible()) { hideReadyUI(); return; }
     renderReady();
     if(roundLive||!window.TBMultiplayer?.room)return;
     if(gameMode==='duel'){
@@ -263,7 +275,7 @@
   }
 
   readyBtn.addEventListener('click',()=>{
-    if(roundLive||(gameMode==='party'&&partyHost()))return;
+    if(!isBattleMode()||roundLive||(gameMode==='party'&&partyHost()))return;
     setLocalReady(!localReady,true); setTimeout(maybeStart,40);
   });
   hostStartBtn.addEventListener('click',()=>{if(gameMode==='party'&&partyHost())broadcastStart('host-start');});
@@ -271,13 +283,13 @@
   if(window.TBMultiplayer){
     TBMultiplayer.onMessage(msg=>{
       const p=msg.payload||{};
-      if(msg.type==='ready_state')setTimeout(()=>{renderReady();maybeStart();},25);
+      if(msg.type==='ready_state'&&isBattleMode())setTimeout(()=>{renderReady();maybeStart();},25);
       if(msg.type==='party_host_announce'&&gameMode==='party'){
         knownPartyHostId=String(p.hostId||msg.playerId||''); knownPartyHostName=p.hostName||'Host'; renderReady();
       }
       if(msg.type==='party_lobby_deadline'&&gameMode==='party'){partyDeadline=Number(p.deadline||0);renderReady();}
-      if(msg.type==='round_start'&&p.mode===gameMode)scheduleRound(p.token,p.startAt);
-      if(msg.type==='round_reset'){
+      if(msg.type==='round_start'&&p.mode===gameMode&&isBattleMode())scheduleRound(p.token,p.startAt);
+      if(msg.type==='round_reset'&&isBattleMode()){
         roundLive=false;scheduledToken='';partyDeadline=0;setLocalReady(false,false);fieldCountdown.classList.add('hidden');
       }
     });
@@ -285,19 +297,22 @@
 
   const originalEnd=endGame;
   endGame=function(reason){
+    const modeAtEnd=gameMode;
     const result=originalEnd(reason);
-    if(gameRunning===false){
+    if(isBattleMode()&&gameRunning===false){
       roundLive=false;scheduledToken='';partyDeadline=0;setLocalReady(false,false);fieldCountdown.classList.add('hidden');
-      if(window.TBMultiplayer?.room)TBMultiplayer.send('round_reset',{mode:gameMode});
+      if(window.TBMultiplayer?.room)TBMultiplayer.send('round_reset',{mode:modeAtEnd});
     }
     return result;
   };
 
   document.querySelectorAll('.mode-card').forEach(btn=>btn.addEventListener('click',()=>setTimeout(()=>{
     roundLive=false;scheduledToken='';partyDeadline=0;knownPartyHostId='';knownPartyHostName='Host';
-    setLocalReady(false,true);fieldCountdown.classList.add('hidden');renderReady();
+    if(isBattleMode()) setLocalReady(false,true); else {localReady=false;hideReadyUI();}
+    fieldCountdown.classList.add('hidden');renderReady();
   },30)));
 
-  setInterval(()=>{renderReady();maybeStart();},250);
+  if($('game')) new MutationObserver(renderReady).observe($('game'),{attributes:true,attributeFilter:['class','style']});
+  setInterval(()=>{ if(gameVisible()&&isBattleMode()) maybeStart(); },500);
   renderReady();
 })();
