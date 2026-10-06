@@ -1,4 +1,4 @@
-// v44: KO Blocks commercial-facing rebrand without changing legacy DOM IDs/game hooks.
+// v46: lightweight KO Blocks rebrand. Avoids broad DOM scans/observers during gameplay.
 (() => {
   const $ = id => document.getElementById(id);
 
@@ -13,17 +13,7 @@
     const strong = card.querySelector('strong');
     const small = card.querySelector('small');
     if (strong && strong.textContent !== title) strong.textContent = title;
-    if (sub) {
-      if (small) small.textContent = sub;
-      else {
-        const span = strong?.parentElement;
-        if (span) {
-          const s = document.createElement('small');
-          s.textContent = sub;
-          span.appendChild(s);
-        }
-      }
-    }
+    if (small && sub && small.textContent !== sub) small.textContent = sub;
   }
 
   function patchHero() {
@@ -34,15 +24,16 @@
     setText('.brand h1','KO Blocks');
 
     const logo = document.querySelector('.block-logo');
-    if (logo) {
+    if (logo && logo.getAttribute('aria-label') !== 'KO Blocks') {
       logo.setAttribute('aria-label','KO Blocks');
       logo.innerHTML = `
         <span class="logo-row logo-top ko-logo-top"><b>K</b><b>O</b></span>
         <span class="logo-row logo-bottom"><b>B</b><b>L</b><b>O</b><b>C</b><b>K</b><b>S</b></span>`;
     }
     const heroP = document.querySelector('#baseLandingHero > p');
-    if (heroP) {
+    if (heroP && !heroP.dataset.koPatched) {
       heroP.innerHTML = '<strong>Block. Attack. Survive.</strong><br><span>Knock out your rivals.</span>';
+      heroP.dataset.koPatched = '1';
     }
   }
 
@@ -84,11 +75,8 @@
     if (introP) introP.textContent = 'No timer pressure. Learn movement, rotation, drops, HOLD, line clears, attacks, KOs, and pause/resume one step at a time.';
     const quick = $('tutorialQuickControls');
     if (quick) {
-      const labels = quick.querySelectorAll('b');
       const spans = quick.querySelectorAll('span');
-      if (labels[0]) labels[0].textContent = 'Keyboard';
       if (spans[0]) spans[0].textContent = '← → Move · ↑ Rotate · ↓ Soft Drop · Space Hard Drop · C/H Hold · P Pause';
-      if (labels[1]) labels[1].textContent = 'Touch';
       if (spans[1]) spans[1].textContent = 'Right-side arrow cluster: ◀ ▶ move · ▼ soft drop · ⟳ in the Up position rotates · long HARD DROP button acts like Space · tap the HOLD box to hold/swap.';
     }
   }
@@ -102,18 +90,11 @@
     if (duelSmall) duelSmall.textContent = 'No room code. We’ll match you with one opponent.';
     const fine = document.querySelector('.fineprint');
     if (fine) fine.textContent = '1v1 uses automatic matchmaking. Battle Arena is private and invite/code based for 2 to 6 players. Solo includes Sprint and Marathon.';
-    const board = $('board');
-    if (board) board.setAttribute('aria-label','KO Blocks game board');
+    $('board')?.setAttribute('aria-label','KO Blocks game board');
 
-    document.querySelectorAll('*').forEach(el => {
-      if (el.children.length) return;
-      const t = (el.textContent || '').trim();
-      if (t === 'God of Tetris') el.textContent = 'KO Legend';
-      else if (t === 'Tetris Battle Z') el.textContent = 'KO Blocks';
-      else if (t === 'Tetris Battle') el.textContent = 'KO Blocks';
-      else if (t === 'Solo Session') el.textContent = 'Solo Challenge';
-      else if (t === 'Party Session') el.textContent = 'Battle Arena';
-      else if (t === '2P Battle') el.textContent = '1v1 Battle';
+    // Target only known legacy labels instead of scanning every DOM node on every mutation.
+    document.querySelectorAll('.rank-name,.rank-title,#rankName,#rankTitle').forEach(el => {
+      if ((el.textContent || '').trim() === 'God of Tetris') el.textContent = 'KO Legend';
     });
   }
 
@@ -135,12 +116,27 @@
   document.head.appendChild(style);
 
   let queued = false;
-  const schedule = () => {
+  function schedulePatch() {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; patchAll(); });
-  };
-  new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','data-mode']});
-  document.addEventListener('click',()=>setTimeout(schedule,0),true);
+    requestAnimationFrame(() => {
+      queued = false;
+      patchModes();
+      patchSetup();
+      patchTutorial();
+      patchMisc();
+    });
+  }
+
+  // Mode changes are user-driven, so patch only around those events instead of observing the whole app.
+  document.addEventListener('click', event => {
+    if (event.target?.closest?.('.mode-card,#backToModesBtn,#tutorialModeCard,#tutorialControlsBtn')) {
+      setTimeout(schedulePatch, 0);
+      setTimeout(schedulePatch, 180);
+    }
+  }, true);
+  window.addEventListener('popstate', schedulePatch);
+  window.addEventListener('hashchange', schedulePatch);
+
   patchAll();
 })();
