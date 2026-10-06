@@ -42,9 +42,7 @@
 
   // Override the normal drop and clear cues with stronger battle-first SFX.
   sfxDrop=heavyDrop;
-  const previousClearSfx=clearSfx;
   clearSfx=function(lines,comboCount,perfect){
-    // A short line-clear sparkle first, then the attack cue.
     const n=Math.max(1,Number(lines)||1);
     fx(420+n*80,.07,'square',.07,0);
     fx(610+n*95,.09,'triangle',.075,.035);
@@ -56,6 +54,22 @@
   // Keep end-result SFX above the background track too.
   sfxWin=winFanfare;
   sfxLose=function(){ selfKO(); setTimeout(boo,260); };
+
+  // Duel KO cues: opponent KO = boxing bell; your KO = descending "kukuuu".
+  let lastMyKO=Number(document.getElementById('myKO')?.textContent||0);
+  let lastRivalKO=Number(document.getElementById('rivalKO')?.textContent||0);
+  const myKO=document.getElementById('myKO');
+  const rivalKO=document.getElementById('rivalKO');
+  if(myKO) new MutationObserver(()=>{
+    const next=Number(myKO.textContent||0);
+    if(next>lastMyKO) enemyKO();
+    lastMyKO=next;
+  }).observe(myKO,{childList:true,characterData:true,subtree:true});
+  if(rivalKO) new MutationObserver(()=>{
+    const next=Number(rivalKO.textContent||0);
+    if(next>lastRivalKO) selfKO();
+    lastRivalKO=next;
+  }).observe(rivalKO,{childList:true,characterData:true,subtree:true});
 
   function confetti(){
     const layer=document.createElement('div'); layer.className='confetti-layer';
