@@ -1,4 +1,4 @@
-// Tetris Battle v10: full live board stage for 1v1 and up to 6-player Party.
+// KO Blocks live board stage for 1v1 and up to 6-player Battle Arena.
 (() => {
   const $ = id => document.getElementById(id);
   const gameEl = $('game');
@@ -58,6 +58,10 @@
   `;
   document.head.appendChild(style);
 
+  const blankBoard = () => Array.from({length:20},()=>Array(10).fill(''));
+  const isMultiplayerMode = () => gameMode === 'duel' || gameMode === 'party';
+  const isGameOpen = () => !gameEl.classList.contains('hidden') && getComputedStyle(gameEl).display !== 'none';
+
   function drawRemote(canvas, bd) {
     if (!canvas || !Array.isArray(bd)) return;
     const c = canvas.getContext('2d');
@@ -91,12 +95,29 @@
     return tile;
   }
 
+  function clearRemoteTiles() {
+    grid.querySelectorAll('.remote-live-tile').forEach(t => t.remove());
+  }
+
   function render() {
-    const party = gameMode === 'party';
+    if (!isGameOpen()) return;
     gameEl.classList.add('live-stage-mode');
-    grid.classList.toggle('party', party); grid.classList.toggle('duel', !party);
     $('localLiveName').textContent = ($('playerName')?.value || 'YOU').toUpperCase();
     $('localLiveMeta').innerHTML = `${Number(score || 0).toLocaleString()} pts · <span id="localReadyChip" class="ready-chip">NOT READY</span>`;
+
+    if (gameMode === 'solo') {
+      grid.classList.add('solo');
+      grid.classList.remove('duel','party');
+      clearRemoteTiles();
+      $('localPlace').textContent = 'YOU';
+      $('localLiveKO').textContent = '';
+      localTile.style.order = 1;
+      return;
+    }
+
+    const party = gameMode === 'party';
+    grid.classList.remove('solo');
+    grid.classList.toggle('party', party); grid.classList.toggle('duel', !party);
     const localKO = Number($('myKO')?.textContent || 0);
     $('localLiveKO').textContent = `${localKO} / 5 KO`;
 
@@ -136,12 +157,12 @@
       tile.querySelector('.live-player-head small').textContent = 'Finding an online opponent…';
       tile.querySelector('.live-ko').textContent = '0 / 5 KO';
       tile.querySelector('.remote-waiting').classList.remove('hidden');
-      drawRemote(tile.querySelector('.remote-board-shell canvas'), Array.from({length:20},()=>Array(10).fill('')));
+      drawRemote(tile.querySelector('.remote-board-shell canvas'), blankBoard());
     }
   }
 
   function sendState() {
-    if (!window.TBMultiplayer || !TBMultiplayer.room) return;
+    if (!isGameOpen() || !isMultiplayerMode() || !window.TBMultiplayer || !TBMultiplayer.room) return;
     const sent = gameMode==='party' ? Number(window.TBPartyBattle?.localLinesSent||0) : Number(window.TBBattle?.totalSent||0);
     TBMultiplayer.send('live_state', {
       name: $('playerName')?.value || 'Player', mode: gameMode, board, hold:window.TBHold?.type||'', score: Number(score||0),
@@ -151,9 +172,19 @@
     });
   }
 
-  function startLiveSync() {
+  function stopLiveSync() {
     clearInterval(liveSyncTimer);
-    liveSyncTimer = setInterval(() => { sendState(); render(); }, 250);
+    liveSyncTimer = null;
+  }
+
+  function startLiveSync() {
+    stopLiveSync();
+    if (!isMultiplayerMode()) return;
+    liveSyncTimer = setInterval(() => {
+      if (!isGameOpen() || !isMultiplayerMode()) return;
+      sendState();
+      render();
+    }, 350);
   }
 
   if (window.TBMultiplayer) {
@@ -165,28 +196,46 @@
       }
       if (msg.type === 'live_state') {
         remotes.set(msg.playerId, {
-          name:p.name||'Player', mode:p.mode||'duel', board:Array.isArray(p.board)?p.board:Array.from({length:20},()=>Array(10).fill('')),
+          name:p.name||'Player', mode:p.mode||'duel', board:Array.isArray(p.board)?p.board:blankBoard(),
           hold:/^[IJLOSTZ]$/.test(String(p.hold||''))?String(p.hold):'', score:Number(p.score||0), ko:Number(p.ko||0),
           timeLeft:Number(p.timeLeft||120), sessionWins:Number(p.sessionWins||0), totalSent:Number(p.totalSent||0), ready:!!p.ready, seen:Date.now()
         });
       }
       if (msg.type === 'ready_state') {
-        const prior = remotes.get(msg.playerId) || {board:Array.from({length:20},()=>Array(10).fill('')), hold:'', score:0, ko:0, mode:p.mode||gameMode};
+        const prior = remotes.get(msg.playerId) || {board:blankBoard(), hold:'', score:0, ko:0, mode:p.mode||gameMode};
         remotes.set(msg.playerId, {...prior, name:p.name||prior.name||'Player', mode:p.mode||prior.mode, ready:!!p.ready, seen:Date.now()});
       }
-      render();
+      if (isGameOpen() && isMultiplayerMode()) render();
     });
   }
 
   const oldOpen = openGame;
   openGame = function(code) {
     const r = oldOpen(code);
-    setTimeout(() => { startLiveSync(); sendState(); render(); }, 0);
+    setTimeout(() => {
+      if (isMultiplayerMode()) {
+        startLiveSync();
+        sendState();
+      } else {
+        stopLiveSync();
+      }
+      render();
+    }, 0);
     return r;
   };
 
+  const oldQuit = quitGame;
+  quitGame = function() {
+    stopLiveSync();
+    remotes.clear();
+    clearRemoteTiles();
+    const result = oldQuit();
+    return result;
+  };
+
   window.addEventListener('tb-hold-change',()=>sendState());
-  document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => setTimeout(() => { sendState(); render(); }, 20)));
-  window.TBLiveGrid = { remotes, render, sendState };
+  document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => setTimeout(() => { if (isGameOpen()) render(); }, 20)));
+  document.addEventListener('visibilitychange',()=>{ if (document.hidden) stopLiveSync(); else if (isGameOpen() && isMultiplayerMode()) startLiveSync(); });
+  window.TBLiveGrid = { remotes, render, sendState, startLiveSync, stopLiveSync };
   render();
 })();
