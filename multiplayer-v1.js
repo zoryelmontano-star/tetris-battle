@@ -1,6 +1,5 @@
-// Tetris Battle multiplayer transport.
-// Uses Firebase Realtime Database when firebase-config.json is configured.
-// Falls back to BroadcastChannel for same-browser testing until then.
+// KO Blocks multiplayer transport.
+// Firebase loads only when a multiplayer action actually needs it.
 (() => {
   const SDK = '12.19.0';
   const handlers = new Set();
@@ -43,6 +42,7 @@
   async function initFirebase() {
     if (fb) return fb;
     if (fbInit) return fbInit;
+    window.TBFirebase = { ready:false, status:'connecting' };
     fbInit = (async () => {
       const config = await readConfig();
       if (!config?.apiKey || !config?.projectId || !config?.databaseURL) {
@@ -281,6 +281,6 @@
     init:initFirebase, connect, disconnect, send, createParty, joinParty, findDuel,
     onMessage(fn){ if(typeof fn !== 'function') return () => {}; handlers.add(fn); return () => handlers.delete(fn); }
   };
-  window.TBFirebase = window.TBFirebase || {ready:false, status:'checking'};
-  initFirebase();
+  window.TBFirebase = window.TBFirebase || {ready:false, status:'idle'};
+  // Important: do not initialize Firebase on landing/Solo/Tutorial. Multiplayer actions call initFirebase lazily.
 })();
