@@ -4,6 +4,15 @@
   let holdType = null;
   let holdLocked = false;
 
+  // Public read-only HOLD state for live multiplayer previews.
+  window.TBHold = {
+    get type(){ return holdType || ''; },
+    get locked(){ return !!holdLocked; }
+  };
+  function announceHold(){
+    window.dispatchEvent(new CustomEvent('tb-hold-change',{detail:{type:holdType||'',locked:!!holdLocked}}));
+  }
+
   // Build HOLD panel to the left of the board.
   const playStage = document.querySelector('.play-stage');
   const boardShell = document.querySelector('.board-shell');
@@ -22,7 +31,6 @@
     playStage.insertBefore(holdPanel, boardShell);
   }
 
-  // Arcade side-panel styling, matched to the current muted palette.
   const style = document.createElement('style');
   style.textContent = `
     .play-stage{display:grid!important;grid-template-columns:118px minmax(0,360px) 118px!important;justify-content:center!important;align-items:start!important;gap:12px!important}
@@ -107,25 +115,26 @@
     holdLocked = true;
     holdSfx();
     renderHold();
+    announceHold();
     if (collide(current)) endGame('lose');
     draw();
   }
 
-  // A hold becomes available again only after the current piece locks.
   const originalLockPiece = lockPiece;
   lockPiece = function () {
     holdLocked = false;
     originalLockPiece();
     renderHold();
+    announceHold();
   };
 
-  // Reset HOLD when a new battle or room starts.
   const originalStartGame = startGame;
   startGame = function () {
     holdType = null;
     holdLocked = false;
     const result = originalStartGame();
     renderHold();
+    announceHold();
     return result;
   };
 
@@ -135,10 +144,10 @@
     holdLocked = false;
     const result = originalOpenGame(code);
     renderHold();
+    announceHold();
     return result;
   };
 
-  // Ghost piece / landing trace.
   function ghostDistance() {
     if (!current) return 0;
     let d = 0;
@@ -173,7 +182,6 @@
     drawGhost();
   };
 
-  // Keyboard HOLD: C or H.
   document.addEventListener('keydown', event => {
     if (event.key === 'c' || event.key === 'C' || event.key === 'h' || event.key === 'H') {
       event.preventDefault();
@@ -187,7 +195,6 @@
     holdCurrent();
   });
 
-  // Keep hold button enabled/disabled correctly around pause/resume.
   const originalPauseGame = pauseGame;
   pauseGame = function () {
     const result = originalPauseGame();
@@ -196,4 +203,5 @@
   };
 
   renderHold();
+  announceHold();
 })();
