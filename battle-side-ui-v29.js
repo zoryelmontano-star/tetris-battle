@@ -1,6 +1,7 @@
-// v29: HOLD-side battle info. Counters live below HOLD, never over the Tetris board.
+// v46: HOLD-side battle info with lightweight refresh only while a game is visible.
 (() => {
   const $ = id => document.getElementById(id);
+  const gameEl = $('game');
 
   function drawHold(canvas,type){
     if(!canvas)return;
@@ -91,7 +92,10 @@
     side.querySelector('.hold-sent-value').textContent=Number(window.TBAIStats?.linesSent||0);
   }
 
+  function gameVisible(){ return !!gameEl && !gameEl.classList.contains('hidden') && getComputedStyle(gameEl).display!=='none'; }
+
   function refresh(){
+    if(!gameVisible()) return;
     document.querySelectorAll('.battle-stat-rail').forEach(el=>el.remove());
     if(gameMode==='solo'){
       document.querySelectorAll('.hold-battle-stats,.remote-hold-panel').forEach(el=>el.classList.add('hidden-battle-side'));
@@ -143,6 +147,8 @@
   document.head.appendChild(style);
 
   window.addEventListener('tb-hold-change',()=>{window.TBLiveGrid?.sendState?.();refresh();});
-  setInterval(refresh,120);
+  if(gameEl) new MutationObserver(refresh).observe(gameEl,{attributes:true,attributeFilter:['class','style']});
+  // Remote boards/KO counters can change without a local DOM event; refresh at a modest rate only while the game is visible.
+  setInterval(()=>{ if(gameVisible()) refresh(); },500);
   refresh();
 })();
