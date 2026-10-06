@@ -12,6 +12,7 @@
   let localLinesSent = 0;
   let localKOs = 0;
   let localDeaths = 0;
+  let aiLinesSent = 0;
   let lastAttackerId = '';
   let lastAttackerName = '';
   let lastAttackAt = 0;
@@ -96,7 +97,6 @@
     attack = localLinesSent;
     localStat();
     updateHud?.();
-    window.TBSfx?.garbageSend?.(lines);
     TBMultiplayer.send('party_garbage', {
       targetId, lines, fromName:localName(), totalSent:localLinesSent,
       rank:Number(rankNow().rank||1), rankTitle:String(rankNow().title||'Newbie')
@@ -142,6 +142,8 @@
   };
 
   startGame=function(){
+    clearBoardResults(); lastDuelResult='';
+    if(window.TBAIMode) aiLinesSent=0;
     if(gameMode==='party') resetRoundStats();
     const out=priorStartGame();
     if(gameMode==='party'){
@@ -152,6 +154,7 @@
   };
 
   openGame=function(code){
+    clearBoardResults(); lastDuelResult='';
     const out=priorOpenGame(code);
     if(gameMode==='party') resetRoundStats();
     return out;
@@ -285,6 +288,8 @@
     });
   }
 
+  window.addEventListener('tb-ai-lines',e=>{ aiLinesSent=Number(e.detail?.total||0); });
+
   function flashKO(tile){
     if(!tile)return; const shell=tile.querySelector('.board-shell,.remote-board-shell'); if(!shell)return;
     const el=document.createElement('div'); el.className='party-ko-flash'; el.textContent='K.O.!'; shell.appendChild(el); setTimeout(()=>el.remove(),850);
@@ -311,9 +316,7 @@
       setRail($('localLiveTile'),Number($('myKO')?.textContent||0),Number(window.TBBattle?.totalSent||attack||0));
       const rem=activeRemoteEntries('duel')[0];
       if(rem){ const [id,state]=rem; setRail($(`live-${id}`),Number(state.ko||0),Number(remoteSent.get(String(id))||state.totalSent||0)); }
-      if(window.TBAIMode){
-        const aiSent=Number(window.TBAIStats?.linesSent||0); setRail($('live-ai-rival'),Number($('rivalKO')?.textContent||0),aiSent);
-      }
+      if(window.TBAIMode) setRail($('live-ai-rival'),Number($('rivalKO')?.textContent||0),aiLinesSent);
     } else if(gameMode==='party'){
       setRail($('localLiveTile'),localKOs,localLinesSent);
       activeRemoteEntries('party').forEach(([id,state])=>{ const s=stats.get(String(id))||{}; setRail($(`live-${id}`),Number(s.kos||state.ko||0),Number(s.linesSent||remoteSent.get(String(id))||0)); });
