@@ -1,44 +1,38 @@
-// v36: Touch gestures, hidden on-screen controls, and reliable multiplayer orientation gating.
+// v38: Tactical touch controls + reliable multiplayer orientation gating.
 (() => {
-  // The directional/rotate/drop pad and dedicated HOLD button are implementation hooks only.
-  // Keep them in the DOM for existing event wiring, but never show them in the UI.
-  const hiddenControlStyle = document.createElement('style');
-  hiddenControlStyle.textContent = `
-    .touch-controls{display:none!important}
-    .hold-touch-btn{display:none!important}
-  `;
-  document.head.appendChild(hiddenControlStyle);
-
   const coarse = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
   const $ = id => document.getElementById(id);
 
+  // Keep the legacy control pad in the DOM as an action bus, but never show it.
+  const baseStyle = document.createElement('style');
+  baseStyle.textContent = `
+    .touch-controls{display:none!important}
+    .hold-touch-btn{display:none!important}
+  `;
+  document.head.appendChild(baseStyle);
+
   // ---------- Multiplayer orientation / screen gate ----------
   const MIN_MULTIPLAYER_LANDSCAPE_WIDTH = 640;
-  let gateReason = '';
   let pendingMultiplayerEntry = null;
-
-  function isMultiplayerMode(){
-    return typeof gameMode !== 'undefined' && (gameMode === 'duel' || gameMode === 'party');
-  }
 
   function viewportSize(){
     const vv = window.visualViewport;
-    const width = Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 0);
-    const height = Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 0);
-    return {width, height};
+    return {
+      width: Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 0),
+      height: Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 0)
+    };
   }
-
-  function landscapeWidth(){
-    const {width, height} = viewportSize();
-    return Math.max(width, height);
-  }
-
   function isLandscape(){
-    const {width, height} = viewportSize();
-    const mediaLandscape = !!window.matchMedia?.('(orientation: landscape)').matches;
-    return mediaLandscape || width > height;
+    const {width,height} = viewportSize();
+    return !!window.matchMedia?.('(orientation: landscape)').matches || width > height;
   }
-
+  function landscapeWidth(){
+    const {width,height} = viewportSize();
+    return Math.max(width,height);
+  }
+  function isMultiplayerMode(){
+    return typeof gameMode !== 'undefined' && (gameMode === 'duel' || gameMode === 'party');
+  }
   function ensureScreenGate(){
     let gate = $('multiplayerScreenGate');
     if (gate) return gate;
@@ -49,74 +43,59 @@
       <div class="multiplayer-screen-card" role="dialog" aria-modal="true" aria-labelledby="multiplayerScreenTitle">
         <div class="multiplayer-screen-icon">↻</div>
         <h2 id="multiplayerScreenTitle">Rotate your device</h2>
-        <p id="multiplayerScreenText">Multiplayer works best in landscape so the battle boards stay readable.</p>
-        <small id="multiplayerScreenHint">Solo and Tutorial can still be played in portrait.</small>
+        <p id="multiplayerScreenText">Multiplayer uses a landscape battle layout.</p>
+        <small id="multiplayerScreenHint">Rotate to landscape to continue.</small>
       </div>`;
     document.body.appendChild(gate);
-
     const style = document.createElement('style');
     style.textContent = `
-      .multiplayer-screen-gate{position:fixed;inset:0;z-index:22000;display:grid;place-items:center;padding:22px;background:rgba(5,7,20,.94);backdrop-filter:blur(12px)}
+      .multiplayer-screen-gate{position:fixed;inset:0;z-index:26000;display:grid;place-items:center;padding:22px;background:rgba(5,7,20,.95);backdrop-filter:blur(12px)}
       .multiplayer-screen-gate.hidden{display:none!important}
       .multiplayer-screen-card{width:min(92vw,470px);padding:30px 25px;border-radius:25px;text-align:center;background:linear-gradient(160deg,#252365,#15173d 55%,#0d112d);border:2px solid #5bdfff;box-shadow:0 30px 80px rgba(0,0,0,.62),0 0 42px rgba(72,212,255,.2)}
       .multiplayer-screen-icon{font-size:48px;line-height:1;color:#6de9ff;margin-bottom:8px}
-      .multiplayer-screen-card h2{margin:6px 0 8px;color:#fff;font-size:26px}
-      .multiplayer-screen-card p{margin:0;color:#c8cae8;font-size:13px;line-height:1.55}
-      .multiplayer-screen-card small{display:block;margin-top:12px;color:#7f8bb9;font-size:10px;line-height:1.4}
+      .multiplayer-screen-card h2{margin:6px 0 8px;color:#fff;font-size:26px}.multiplayer-screen-card p{margin:0;color:#c8cae8;font-size:13px;line-height:1.55}.multiplayer-screen-card small{display:block;margin-top:12px;color:#7f8bb9;font-size:10px}
     `;
     document.head.appendChild(style);
     return gate;
   }
-
   function screenGateReason(){
     if (!coarse || !isMultiplayerMode()) return '';
     if (!isLandscape()) return 'rotate';
     if (landscapeWidth() < MIN_MULTIPLAYER_LANDSCAPE_WIDTH) return 'small';
     return '';
   }
-
   function resumePendingEntry(){
     if (!pendingMultiplayerEntry) return;
     const trigger = pendingMultiplayerEntry;
     pendingMultiplayerEntry = null;
-    if (!trigger.isConnected) return;
-    setTimeout(() => trigger.click(), 80);
+    if (trigger.isConnected) setTimeout(() => trigger.click(), 100);
   }
-
-  function renderScreenGate(forceReason = ''){
+  function renderScreenGate(forceReason=''){
     const gate = ensureScreenGate();
-    gateReason = forceReason || screenGateReason();
-    const title = $('multiplayerScreenTitle');
-    const text = $('multiplayerScreenText');
-    const hint = $('multiplayerScreenHint');
-
-    if (!gateReason) {
+    const reason = forceReason || screenGateReason();
+    if (!reason) {
       gate.classList.add('hidden');
       resumePendingEntry();
       return false;
     }
-
-    if (gateReason === 'rotate') {
+    const title = $('multiplayerScreenTitle');
+    const text = $('multiplayerScreenText');
+    const hint = $('multiplayerScreenHint');
+    if (reason === 'rotate') {
       title.textContent = 'Rotate your device';
-      text.textContent = 'Multiplayer is available in landscape view so both your board and live opponent boards stay readable.';
-      hint.textContent = 'Rotate to landscape. Your multiplayer action will continue automatically.';
+      text.textContent = 'Multiplayer is designed for landscape so your board, opponents, and controls stay readable.';
+      hint.textContent = 'Rotate to landscape. Your action will continue automatically.';
     } else {
       title.textContent = 'Use a larger screen';
-      text.textContent = 'This screen is too small for a fair multiplayer battle layout, even in landscape.';
-      hint.textContent = 'Use a larger phone, tablet, iPad, laptop, or desktop. Solo and Tutorial remain available here.';
+      text.textContent = 'This display is too small for the multiplayer battle layout.';
+      hint.textContent = 'Try a larger phone, tablet, iPad, laptop, or desktop. Solo and Tutorial still work here.';
     }
     gate.classList.remove('hidden');
     return true;
   }
-
   function refreshGateAfterRotation(){
-    // iOS Safari/PWA can update orientation and viewport dimensions at different times.
-    [0, 80, 180, 350, 650, 1000].forEach(delay => {
-      setTimeout(() => renderScreenGate(), delay);
-    });
+    [0,80,180,350,650,1000].forEach(delay => setTimeout(() => renderScreenGate(), delay));
   }
-
-  // Prevent multiplayer entry until a touch device meets the landscape / size requirement.
   document.addEventListener('click', event => {
     if (!coarse) return;
     const trigger = event.target?.closest?.('#find2PBtn,#createRoomBtn,#joinRoomBtn,#battleAIBtn,#readyBtn,[data-multiplayer-entry]');
@@ -129,60 +108,19 @@
     event.stopImmediatePropagation();
     renderScreenGate(reason);
   }, true);
-
   window.addEventListener('resize', refreshGateAfterRotation, {passive:true});
   window.addEventListener('orientationchange', refreshGateAfterRotation, {passive:true});
   window.visualViewport?.addEventListener('resize', refreshGateAfterRotation, {passive:true});
-  try {
-    window.screen?.orientation?.addEventListener?.('change', refreshGateAfterRotation);
-  } catch {}
+  try { window.screen?.orientation?.addEventListener?.('change', refreshGateAfterRotation); } catch {}
 
   if (!coarse) return;
+  document.body.classList.add('tb-tactical-touch');
 
-  const boardShell = document.querySelector('.board-shell');
-  const boardCanvas = $('board');
-  if (!boardShell || !boardCanvas) return;
-
-  document.body.classList.add('tb-gesture-controls');
-
-  const style = document.createElement('style');
-  style.textContent = `
-    .tb-gesture-controls .board-shell,
-    .tb-gesture-controls #board{touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
-    .tb-gesture-controls .hold-card{cursor:pointer;touch-action:manipulation}
-    .tb-gesture-controls .hold-card::after{content:'TAP TO SWAP';position:absolute;left:5px;right:5px;bottom:4px;text-align:center;font-size:7px;font-weight:1000;letter-spacing:.08em;color:#9edff4;opacity:.82;pointer-events:none}
-    .gesture-hint{margin:7px auto 2px;max-width:520px;padding:7px 9px;border:1px solid rgba(105,232,255,.22);border-radius:10px;background:rgba(11,15,40,.64);color:#aeb8dc;font-size:9px;font-weight:800;line-height:1.35;text-align:center;letter-spacing:.015em}
-    .gesture-hint b{color:#72e7ff}
-    @media(max-width:620px){
-      .tb-gesture-controls .play-stage{gap:4px!important}
-      .gesture-hint{font-size:8px;padding:6px 7px}
-    }
-  `;
-  document.head.appendChild(style);
-
-  const bottomActions = document.querySelector('.bottom-actions');
-  if (bottomActions && !$('gestureHint')) {
-    const hint = document.createElement('div');
-    hint.id = 'gestureHint';
-    hint.className = 'gesture-hint';
-    hint.innerHTML = '<b>TOUCH:</b> Drag ← → move · Drag ↓ soft drop · Tap rotate · Double-tap hard drop · Tap HOLD to swap';
-    bottomActions.insertAdjacentElement('beforebegin', hint);
-  }
-
-  const controlsNote = document.querySelector('.controls-note');
-  if (controlsNote) controlsNote.textContent = 'Touch: drag left/right to move · drag down to soft drop · tap to rotate · double-tap to hard drop · tap HOLD to swap · Pause button to pause';
-
-  // Use the hidden legacy buttons as the action bus so all existing hooks,
-  // tutorial tracking, audio, and future wrappers still receive the same events.
-  function fireAction(action) {
-    const btn = document.querySelector(`.touch-controls [data-action="${action}"]`);
-    if (btn) {
-      btn.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        pointerType: 'touch',
-        isPrimary: true
-      }));
+  // ---------- Tactical thumb controls ----------
+  function fireAction(action){
+    const legacy = document.querySelector(`.touch-controls [data-action="${action}"]`);
+    if (legacy) {
+      legacy.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true}));
       return;
     }
     try {
@@ -194,143 +132,127 @@
       if (typeof draw === 'function') draw();
     } catch {}
   }
-
-  function fireHold() {
-    const btn = $('holdBtn');
-    if (!btn) return;
-    btn.dispatchEvent(new PointerEvent('pointerdown', {
-      bubbles: true,
-      cancelable: true,
-      pointerType: 'touch',
-      isPrimary: true
-    }));
+  function fireHold(){
+    const hold = $('holdBtn');
+    if (hold) hold.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true}));
   }
+  function firePause(){ $('pauseBtn')?.click(); }
+  function tinyHaptic(){ try { navigator.vibrate?.(8); } catch {} }
 
-  let activePointer = null;
-  let startX = 0;
-  let startY = 0;
-  let lastHorizontalCell = 0;
-  let lastVerticalCell = 0;
-  let dragged = false;
-  let downAt = 0;
-  let pendingTap = null;
-  let lastTapAt = 0;
-  let lastTapX = 0;
-  let lastTapY = 0;
+  const controls = document.createElement('div');
+  controls.id = 'tacticalTouchControls';
+  controls.className = 'tactical-touch-controls';
+  controls.innerHTML = `
+    <div class="tactical-left" aria-label="Movement controls">
+      <button type="button" data-tactical="left" aria-label="Move left">◀</button>
+      <button type="button" data-tactical="down" aria-label="Soft drop">▼</button>
+      <button type="button" data-tactical="right" aria-label="Move right">▶</button>
+    </div>
+    <button type="button" class="tactical-pause" data-tactical="pause" aria-label="Pause">Ⅱ</button>
+    <div class="tactical-right" aria-label="Action controls">
+      <button type="button" class="tactical-hold" data-tactical="hold"><small>HOLD</small><b>H</b></button>
+      <button type="button" class="tactical-a" data-tactical="rotate"><small>ROTATE</small><b>A</b></button>
+      <button type="button" class="tactical-b" data-tactical="drop"><small>DROP</small><b>B</b></button>
+    </div>`;
+  document.body.appendChild(controls);
 
-  function cellSizes() {
-    const rect = boardCanvas.getBoundingClientRect();
-    return {
-      x: Math.max(18, rect.width / 10),
-      y: Math.max(18, rect.height / 20)
-    };
-  }
-
-  boardShell.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse') return;
-    if (!gameRunning || paused) return;
-    if (event.target?.closest?.('.overlay')) return;
-    event.preventDefault();
-    activePointer = event.pointerId;
-    startX = event.clientX;
-    startY = event.clientY;
-    lastHorizontalCell = 0;
-    lastVerticalCell = 0;
-    dragged = false;
-    downAt = performance.now();
-    try { boardShell.setPointerCapture(event.pointerId); } catch {}
-  }, {passive:false});
-
-  boardShell.addEventListener('pointermove', event => {
-    if (event.pointerId !== activePointer || !gameRunning || paused) return;
-    event.preventDefault();
-    const dx = event.clientX - startX;
-    const dy = event.clientY - startY;
-    const distance = Math.hypot(dx, dy);
-    if (distance > 9) dragged = true;
-    if (!dragged) return;
-
-    const size = cellSizes();
-    const horizontalCell = Math.trunc(dx / size.x);
-    let hDelta = horizontalCell - lastHorizontalCell;
-    hDelta = Math.max(-6, Math.min(6, hDelta));
-    while (hDelta < 0) { fireAction('left'); hDelta++; }
-    while (hDelta > 0) { fireAction('right'); hDelta--; }
-    lastHorizontalCell = horizontalCell;
-
-    const verticalCell = Math.max(0, Math.trunc(dy / size.y));
-    let vDelta = verticalCell - lastVerticalCell;
-    vDelta = Math.max(0, Math.min(10, vDelta));
-    while (vDelta > 0) { fireAction('down'); vDelta--; }
-    lastVerticalCell = verticalCell;
-  }, {passive:false});
-
-  function finishPointer(event) {
-    if (event.pointerId !== activePointer) return;
-    event.preventDefault();
-    try { boardShell.releasePointerCapture(event.pointerId); } catch {}
-    activePointer = null;
-
-    if (dragged) return;
-    const held = performance.now() - downAt;
-    if (held > 420) return;
-
-    const now = performance.now();
-    const nearLastTap = Math.hypot(event.clientX - lastTapX, event.clientY - lastTapY) < 34;
-    const isDouble = now - lastTapAt < 290 && nearLastTap;
-
-    if (isDouble) {
-      clearTimeout(pendingTap);
-      pendingTap = null;
-      lastTapAt = 0;
-      fireAction('drop');
-      return;
+  const tacticalStyle = document.createElement('style');
+  tacticalStyle.textContent = `
+    .tactical-touch-controls{display:none;position:fixed;inset:0;z-index:24000;pointer-events:none;font-family:inherit}
+    body.tb-tactical-touch #game:not(.hidden)~* .tactical-touch-controls{display:none}
+    body.tb-tactical-touch.tb-touch-battle .tactical-touch-controls{display:block}
+    .tactical-left,.tactical-right,.tactical-pause{pointer-events:auto;position:absolute}
+    .tactical-left{left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,58px);gap:7px;align-items:end}
+    .tactical-left button{width:58px;height:58px;border-radius:17px;padding:0;font-size:24px;font-weight:1000;background:linear-gradient(180deg,rgba(54,61,112,.96),rgba(22,27,65,.96));border:2px solid rgba(105,224,255,.58);box-shadow:inset 0 2px 0 rgba(255,255,255,.16),0 8px 20px rgba(0,0,0,.38);touch-action:none;-webkit-user-select:none;user-select:none}
+    .tactical-left button[data-tactical="down"]{transform:translateY(8px)}
+    .tactical-right{right:max(10px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));width:185px;height:96px}
+    .tactical-right button{position:absolute;border-radius:50%;padding:0;display:grid;place-items:center;align-content:center;color:#fff;border:2px solid rgba(255,255,255,.36);box-shadow:inset 0 3px 0 rgba(255,255,255,.16),0 8px 20px rgba(0,0,0,.4);touch-action:none;-webkit-user-select:none;user-select:none}
+    .tactical-right small{font-size:6px;line-height:1;letter-spacing:.08em;opacity:.78}.tactical-right b{font-size:18px;line-height:1.05}
+    .tactical-a{width:66px;height:66px;right:0;top:0;background:linear-gradient(180deg,#ff8d9d,#b93462)}
+    .tactical-b{width:66px;height:66px;right:72px;top:27px;background:linear-gradient(180deg,#68cfff,#2465c7)}
+    .tactical-hold{width:48px;height:48px;left:0;top:1px;background:linear-gradient(180deg,#8d82d8,#4a408b)}
+    .tactical-hold b{font-size:13px}.tactical-hold small{font-size:5px}
+    .tactical-pause{top:max(7px,env(safe-area-inset-top));right:max(9px,env(safe-area-inset-right));width:38px;height:38px;border-radius:12px;padding:0;font-size:16px;background:rgba(16,20,52,.84);border:1px solid rgba(111,228,255,.48);box-shadow:0 5px 14px rgba(0,0,0,.28)}
+    .tactical-touch-controls button:active,.tactical-touch-controls button.pressed{transform:scale(.91)!important;filter:brightness(1.25)}
+    body.tb-touch-battle #game .bottom-actions,body.tb-touch-battle #game .controls-note,body.tb-touch-battle #game .gesture-hint{display:none!important}
+    @media(max-height:430px){
+      .tactical-left{grid-template-columns:repeat(3,50px);gap:6px}.tactical-left button{width:50px;height:50px;border-radius:15px;font-size:21px}
+      .tactical-right{transform:scale(.88);transform-origin:right bottom}.tactical-pause{width:34px;height:34px}
     }
+  `;
+  document.head.appendChild(tacticalStyle);
 
-    lastTapAt = now;
-    lastTapX = event.clientX;
-    lastTapY = event.clientY;
-    clearTimeout(pendingTap);
-    pendingTap = setTimeout(() => {
-      pendingTap = null;
-      fireAction('rotate');
-    }, 300);
+  const repeaters = new Map();
+  function stopRepeat(btn){
+    const ids = repeaters.get(btn);
+    if (ids) { clearTimeout(ids.timeout); clearInterval(ids.interval); repeaters.delete(btn); }
+    btn.classList.remove('pressed');
   }
-
-  boardShell.addEventListener('pointerup', finishPointer, {passive:false});
-  boardShell.addEventListener('pointercancel', event => {
-    if (event.pointerId === activePointer) activePointer = null;
-  });
-
-  document.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'mouse') return;
-    const card = event.target?.closest?.('.hold-card');
-    if (!card) return;
+  function startRepeat(btn, action){
+    stopRepeat(btn);
+    btn.classList.add('pressed');
+    tinyHaptic();
+    fireAction(action);
+    const delay = action === 'down' ? 120 : 155;
+    const speed = action === 'down' ? 55 : 72;
+    const ids = {};
+    ids.timeout = setTimeout(() => { ids.interval = setInterval(() => fireAction(action), speed); }, delay);
+    repeaters.set(btn, ids);
+  }
+  controls.addEventListener('pointerdown', event => {
+    const btn = event.target.closest('[data-tactical]');
+    if (!btn) return;
     event.preventDefault();
-    fireHold();
+    const action = btn.dataset.tactical;
+    if (['left','right','down'].includes(action)) startRepeat(btn, action);
+    else {
+      btn.classList.add('pressed'); tinyHaptic();
+      if (action === 'rotate') fireAction('rotate');
+      else if (action === 'drop') fireAction('drop');
+      else if (action === 'hold') fireHold();
+      else if (action === 'pause') firePause();
+    }
+    try { btn.setPointerCapture(event.pointerId); } catch {}
   }, {passive:false});
+  ['pointerup','pointercancel','pointerleave'].forEach(type => controls.addEventListener(type, event => {
+    const btn = event.target.closest?.('[data-tactical]');
+    if (btn) stopRepeat(btn);
+  }, {passive:false}));
 
-  function rewriteTutorialCopy() {
+  // Show tactical controls only while an actual touch battle is open.
+  function refreshControlVisibility(){
+    const game = $('game');
+    const visible = game && !game.classList.contains('hidden');
+    const gate = $('multiplayerScreenGate');
+    const gateOpen = gate && !gate.classList.contains('hidden');
+    const active = visible && !gateOpen && isLandscape();
+    document.body.classList.toggle('tb-touch-battle', !!active);
+  }
+  new MutationObserver(refreshControlVisibility).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',refreshControlVisibility,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(refreshControlVisibility,150),{passive:true});
+  window.visualViewport?.addEventListener('resize',refreshControlVisibility,{passive:true});
+  setInterval(refreshControlVisibility,600);
+  refreshControlVisibility();
+
+  // Touch tutorial copy now teaches the physical-button style layout.
+  function rewriteTutorialCopy(){
     const quick = $('tutorialQuickControls');
     if (quick) {
       const spans = quick.querySelectorAll('span');
-      if (spans[1]) spans[1].textContent = 'Drag left/right to move · Drag down for soft drop · Tap to rotate · Double-tap for hard drop · Tap HOLD to swap · Tap Pause to pause.';
+      if (spans[1]) spans[1].textContent = 'Use ◀ and ▶ to move · ▼ to soft drop · A to rotate · B to hard drop · HOLD to save/swap · Pause to pause.';
     }
-
     const title = $('tutorialCoachTitle')?.textContent || '';
     const text = $('tutorialCoachText');
     if (!text) return;
-    if (title === 'Move your piece') text.textContent = 'Drag left or right across the board to move the falling piece.';
-    else if (title === 'Rotate') text.textContent = 'Tap the board once to rotate the falling piece.';
-    else if (title === 'Soft Drop') text.textContent = 'Drag downward on the board to bring the piece down while keeping control.';
-    else if (title === 'Hard Drop') text.textContent = 'Double-tap the board to instantly lock the piece into its landing position.';
-    else if (title === 'Use HOLD') text.textContent = 'Tap the HOLD preview to save the current piece or swap it with the held piece.';
-    else if (title === 'Pause safely') text.textContent = 'Tap Pause. Your exact board and progress should freeze, then Resume to continue from the same spot.';
+    if (title === 'Move your piece') text.textContent = 'Use the left thumb controls: ◀ and ▶ move the falling piece.';
+    else if (title === 'Rotate') text.textContent = 'Tap A on the right side to rotate the falling piece.';
+    else if (title === 'Soft Drop') text.textContent = 'Press or hold ▼ to bring the piece down faster.';
+    else if (title === 'Hard Drop') text.textContent = 'Tap B to instantly drop and lock the piece.';
+    else if (title === 'Use HOLD') text.textContent = 'Tap HOLD to save the current piece or swap it with the held piece.';
+    else if (title === 'Pause safely') text.textContent = 'Tap the Pause button at the top-right. Resume continues from the same board state.';
   }
-
   rewriteTutorialCopy();
-  const coach = $('tutorialCoach');
-  if (coach) new MutationObserver(rewriteTutorialCopy).observe(coach, {subtree:true, childList:true, characterData:true});
-  const intro = $('tutorialIntro');
-  if (intro) new MutationObserver(rewriteTutorialCopy).observe(intro, {subtree:true, childList:true, characterData:true});
+  const coach = $('tutorialCoach'); if (coach) new MutationObserver(rewriteTutorialCopy).observe(coach,{subtree:true,childList:true,characterData:true});
+  const intro = $('tutorialIntro'); if (intro) new MutationObserver(rewriteTutorialCopy).observe(intro,{subtree:true,childList:true,characterData:true});
 })();
