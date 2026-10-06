@@ -1,4 +1,4 @@
-// v35: Touch gestures, hidden on-screen controls, and multiplayer screen/orientation gating.
+// v36: Touch gestures, hidden on-screen controls, and reliable multiplayer orientation gating.
 (() => {
   // The directional/rotate/drop pad and dedicated HOLD button are implementation hooks only.
   // Keep them in the DOM for existing event wiring, but never show them in the UI.
@@ -15,17 +15,28 @@
   // ---------- Multiplayer orientation / screen gate ----------
   const MIN_MULTIPLAYER_LANDSCAPE_WIDTH = 640;
   let gateReason = '';
+  let pendingMultiplayerEntry = null;
 
   function isMultiplayerMode(){
     return typeof gameMode !== 'undefined' && (gameMode === 'duel' || gameMode === 'party');
   }
 
+  function viewportSize(){
+    const vv = window.visualViewport;
+    const width = Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 0);
+    const height = Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+    return {width, height};
+  }
+
   function landscapeWidth(){
-    return Math.max(window.innerWidth || 0, window.innerHeight || 0);
+    const {width, height} = viewportSize();
+    return Math.max(width, height);
   }
 
   function isLandscape(){
-    return (window.innerWidth || 0) >= (window.innerHeight || 0);
+    const {width, height} = viewportSize();
+    const mediaLandscape = !!window.matchMedia?.('(orientation: landscape)').matches;
+    return mediaLandscape || width > height;
   }
 
   function ensureScreenGate(){
@@ -64,6 +75,14 @@
     return '';
   }
 
+  function resumePendingEntry(){
+    if (!pendingMultiplayerEntry) return;
+    const trigger = pendingMultiplayerEntry;
+    pendingMultiplayerEntry = null;
+    if (!trigger.isConnected) return;
+    setTimeout(() => trigger.click(), 80);
+  }
+
   function renderScreenGate(forceReason = ''){
     const gate = ensureScreenGate();
     gateReason = forceReason || screenGateReason();
@@ -73,13 +92,14 @@
 
     if (!gateReason) {
       gate.classList.add('hidden');
+      resumePendingEntry();
       return false;
     }
 
     if (gateReason === 'rotate') {
       title.textContent = 'Rotate your device';
       text.textContent = 'Multiplayer is available in landscape view so both your board and live opponent boards stay readable.';
-      hint.textContent = 'Solo and Tutorial can still be played in portrait.';
+      hint.textContent = 'Rotate to landscape. Your multiplayer action will continue automatically.';
     } else {
       title.textContent = 'Use a larger screen';
       text.textContent = 'This screen is too small for a fair multiplayer battle layout, even in landscape.';
@@ -89,6 +109,13 @@
     return true;
   }
 
+  function refreshGateAfterRotation(){
+    // iOS Safari/PWA can update orientation and viewport dimensions at different times.
+    [0, 80, 180, 350, 650, 1000].forEach(delay => {
+      setTimeout(() => renderScreenGate(), delay);
+    });
+  }
+
   // Prevent multiplayer entry until a touch device meets the landscape / size requirement.
   document.addEventListener('click', event => {
     if (!coarse) return;
@@ -96,14 +123,19 @@
     if (!trigger) return;
     const reason = screenGateReason();
     if (!reason) return;
+    pendingMultiplayerEntry = trigger;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
     renderScreenGate(reason);
   }, true);
 
-  window.addEventListener('resize', () => renderScreenGate());
-  window.addEventListener('orientationchange', () => setTimeout(() => renderScreenGate(), 120));
+  window.addEventListener('resize', refreshGateAfterRotation, {passive:true});
+  window.addEventListener('orientationchange', refreshGateAfterRotation, {passive:true});
+  window.visualViewport?.addEventListener('resize', refreshGateAfterRotation, {passive:true});
+  try {
+    window.screen?.orientation?.addEventListener?.('change', refreshGateAfterRotation);
+  } catch {}
 
   if (!coarse) return;
 
