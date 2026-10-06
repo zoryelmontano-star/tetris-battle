@@ -1,4 +1,4 @@
-// v46: lightweight KO Blocks rebrand. Avoids broad DOM scans/observers during gameplay.
+// v49: lightweight KO Blocks rebrand. Avoids broad DOM scans/observers during gameplay.
 (() => {
   const $ = id => document.getElementById(id);
 
@@ -39,7 +39,7 @@
 
   function patchModes() {
     setCard('duel','1v1 Battle','First to 5 KOs wins');
-    setCard('party','Battle Arena','2 to 6 players · Multiplayer knockout battle');
+    setCard('party','Battle Arena','3 to 6 players · Multiplayer knockout battle');
     setCard('solo','Solo Challenge','Sprint or Marathon');
 
     const tutorial = $('tutorialModeCard');
@@ -62,7 +62,7 @@
       if (sub) sub.textContent = 'Enter your player name, then find one rival.';
     } else if (mode === 'party') {
       if (title) title.textContent = 'Battle Arena';
-      if (sub) sub.textContent = 'Create or join a private multiplayer battle room.';
+      if (sub) sub.textContent = 'Create or join a private battle room. Minimum 3 players, maximum 6.';
     } else if (mode === 'solo') {
       if (title) title.textContent = 'Solo Challenge';
       if (sub) sub.textContent = 'Choose Sprint or Marathon and start immediately.';
@@ -89,7 +89,7 @@
     const duelSmall = document.querySelector('#duelQuickPanel .duel-panel-head small');
     if (duelSmall) duelSmall.textContent = 'No room code. We’ll match you with one opponent.';
     const fine = document.querySelector('.fineprint');
-    if (fine) fine.textContent = '1v1 uses automatic matchmaking. Battle Arena is private and invite/code based for 2 to 6 players. Solo includes Sprint and Marathon.';
+    if (fine) fine.textContent = '1v1 uses automatic matchmaking. Battle Arena is private and invite/code based for 3 to 6 players. Solo includes Sprint and Marathon.';
     $('board')?.setAttribute('aria-label','KO Blocks game board');
 
     // Target only known legacy labels instead of scanning every DOM node on every mutation.
@@ -139,4 +139,13 @@
   window.addEventListener('hashchange', schedulePatch);
 
   patchAll();
+})();
+
+// Keep the new game rules/result UX isolated from the rebrand layer, but load it last.
+(() => {
+  if (document.querySelector('script[data-ko-rules-v49]')) return;
+  const script = document.createElement('script');
+  script.src = 'arena-results-rules-v49.js?v=49';
+  script.dataset.koRulesV49 = '1';
+  document.body.appendChild(script);
 })();
