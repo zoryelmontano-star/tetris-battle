@@ -7,12 +7,10 @@
   let playerId = sessionStorage.getItem('tb_player_id') || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
   sessionStorage.setItem('tb_player_id', playerId);
 
-  // BroadcastChannel fallback
   let channel = null;
   let fallbackRoom = '';
   let heartbeat = null;
 
-  // Firebase
   let fb = null;
   let fbInit = null;
   let firebaseConfigured = false;
@@ -26,6 +24,7 @@
   const blankBoard = () => Array.from({length:20}, () => Array(10).fill(''));
   const modeNow = () => { try { return typeof gameMode !== 'undefined' ? gameMode : 'party'; } catch { return 'party'; } };
   const cleanCode = value => String(value || '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+  const cleanHold = value => /^[IJLOSTZ]$/.test(String(value || '').toUpperCase()) ? String(value).toUpperCase() : '';
 
   function dispatch(msg) {
     handlers.forEach(fn => { try { fn(msg); } catch (err) { console.error('TB multiplayer listener error', err); } });
@@ -125,7 +124,7 @@
       if (!current[playerId] && Object.keys(current).length >= max) return;
       current[playerId] = {
         name:String(name || 'Player').slice(0,16), mode, ready:false, score:0, ko:0, seen:Date.now(),
-        state:{ board:blankBoard(), score:0, ko:0, timeLeft:120, sessionWins:0, totalSent:0 }
+        state:{ board:blankBoard(), hold:'', score:0, ko:0, timeLeft:120, sessionWins:0, totalSent:0 }
       };
       return current;
     }, { applyLocally:false });
@@ -141,7 +140,7 @@
       const p = snap.val() || {};
       dispatch({ type:'live_state', playerId:snap.key, ts:Date.now(), payload:{
         name:p.name || 'Player', mode:p.mode || roomMode, ready:!!p.ready,
-        board:p.state?.board || blankBoard(), score:Number(p.state?.score ?? p.score ?? 0),
+        board:p.state?.board || blankBoard(), hold:cleanHold(p.state?.hold), score:Number(p.state?.score ?? p.score ?? 0),
         ko:Number(p.state?.ko ?? p.ko ?? 0), timeLeft:Number(p.state?.timeLeft ?? 120),
         sessionWins:Number(p.state?.sessionWins || 0), totalSent:Number(p.state?.totalSent || 0)
       }});
@@ -182,7 +181,7 @@
       await fb.update(playerRef, {
         name:String(payload.name || 'Player').slice(0,16), mode:payload.mode || roomMode,
         ready:!!payload.ready, seen:fb.serverTimestamp(), score:Number(payload.score || 0), ko:Number(payload.ko || 0),
-        state:{ board:Array.isArray(payload.board) ? payload.board : blankBoard(), score:Number(payload.score||0),
+        state:{ board:Array.isArray(payload.board) ? payload.board : blankBoard(), hold:cleanHold(payload.hold), score:Number(payload.score||0),
           ko:Number(payload.ko||0), timeLeft:Number(payload.timeLeft ?? 120), sessionWins:Number(payload.sessionWins||0), totalSent:Number(payload.totalSent||0) }
       });
       return;
