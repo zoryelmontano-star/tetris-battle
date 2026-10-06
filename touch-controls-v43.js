@@ -1,4 +1,4 @@
-// v43: PC-key-inspired mobile controls. Arrow cluster on the right, spacebar-style hard drop on the left.
+// v46: PC-key-inspired mobile controls with event-driven visibility and tutorial action bridge.
 (() => {
   const touchCapable = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window || !!window.matchMedia?.('(pointer: coarse)').matches;
   if (!touchCapable) return;
@@ -64,6 +64,23 @@
   const running = () => typeof gameRunning !== 'undefined' && !!gameRunning;
   const isPaused = () => typeof paused !== 'undefined' && !!paused;
 
+  function advanceTutorial(action){
+    if (!window.TBTutorialActive) return;
+    const title = ($('tutorialCoachTitle')?.textContent || '').trim();
+    const expected = {
+      'Move your piece':['left','right'],
+      'Rotate':['rotate'],
+      'Soft Drop':['down'],
+      'Hard Drop':['drop'],
+      'Use HOLD':['hold'],
+      'Pause safely':['pause']
+    }[title] || [];
+    if (!expected.includes(action)) return;
+    // tutorial-name-v32 keeps its step state privately. Its Next handler advances that same state,
+    // so clicking the hidden Next button is a safe bridge for the newer touch controls.
+    setTimeout(() => $('tutorialNextBtn')?.click(), 0);
+  }
+
   function act(action){
     try {
       if (action === 'left' && typeof move === 'function') move(-1);
@@ -72,6 +89,7 @@
       else if (action === 'rotate' && typeof rotate === 'function') rotate();
       else if (action === 'drop' && typeof hardDrop === 'function') hardDrop();
       if (typeof draw === 'function') draw();
+      advanceTutorial(action);
     } catch (err) { console.error('Touch action failed', action, err); }
   }
 
@@ -83,6 +101,10 @@
       repeaters.delete(btn);
     }
     btn?.classList.remove('pressed');
+  }
+
+  function stopAllRepeats(){
+    [...repeaters.keys()].forEach(stopRepeat);
   }
 
   function startRepeat(btn, action){
@@ -104,10 +126,12 @@
     const action = btn.dataset.touchAction;
 
     if (action === 'pause') {
+      advanceTutorial('pause');
       try { if (typeof pauseGame === 'function') pauseGame(); else $('pauseBtn')?.click(); } catch {}
       return;
     }
     if (action === 'quit') {
+      stopAllRepeats();
       try { if (typeof quitGame === 'function') quitGame(); else $('quitBtn')?.click(); } catch {}
       return;
     }
@@ -136,6 +160,7 @@
     event.stopPropagation();
     const holdBtn = $('holdBtn');
     if (!holdBtn || holdBtn.disabled) return;
+    advanceTutorial('hold');
     try {
       holdBtn.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerType:'touch',isPrimary:true}));
     } catch {
@@ -152,11 +177,14 @@
     controls.style.setProperty('display',show?'block':'none','important');
     controls.style.setProperty('visibility',show?'visible':'hidden','important');
     controls.style.setProperty('opacity',show?'1':'0','important');
+    if (!show) stopAllRepeats();
   }
 
-  new MutationObserver(refresh).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
+  const gameEl = $('game');
+  if (gameEl) new MutationObserver(refresh).observe(gameEl,{attributes:true,attributeFilter:['class','style']});
   window.addEventListener('resize',refresh,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(refresh,80),{passive:true});
   window.visualViewport?.addEventListener('resize',refresh,{passive:true});
-  setInterval(refresh,500);
+  document.addEventListener('visibilitychange',()=>{ if (document.hidden) stopAllRepeats(); refresh(); },{passive:true});
   refresh();
 })();
