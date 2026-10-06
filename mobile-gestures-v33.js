@@ -1,4 +1,4 @@
-// v34: Gesture controls on touch devices; no on-screen gameplay control pad on any device.
+// v35: Touch gestures, hidden on-screen controls, and multiplayer screen/orientation gating.
 (() => {
   // The directional/rotate/drop pad and dedicated HOLD button are implementation hooks only.
   // Keep them in the DOM for existing event wiring, but never show them in the UI.
@@ -10,9 +10,103 @@
   document.head.appendChild(hiddenControlStyle);
 
   const coarse = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+  const $ = id => document.getElementById(id);
+
+  // ---------- Multiplayer orientation / screen gate ----------
+  const MIN_MULTIPLAYER_LANDSCAPE_WIDTH = 640;
+  let gateReason = '';
+
+  function isMultiplayerMode(){
+    return typeof gameMode !== 'undefined' && (gameMode === 'duel' || gameMode === 'party');
+  }
+
+  function landscapeWidth(){
+    return Math.max(window.innerWidth || 0, window.innerHeight || 0);
+  }
+
+  function isLandscape(){
+    return (window.innerWidth || 0) >= (window.innerHeight || 0);
+  }
+
+  function ensureScreenGate(){
+    let gate = $('multiplayerScreenGate');
+    if (gate) return gate;
+    gate = document.createElement('div');
+    gate.id = 'multiplayerScreenGate';
+    gate.className = 'multiplayer-screen-gate hidden';
+    gate.innerHTML = `
+      <div class="multiplayer-screen-card" role="dialog" aria-modal="true" aria-labelledby="multiplayerScreenTitle">
+        <div class="multiplayer-screen-icon">↻</div>
+        <h2 id="multiplayerScreenTitle">Rotate your device</h2>
+        <p id="multiplayerScreenText">Multiplayer works best in landscape so the battle boards stay readable.</p>
+        <small id="multiplayerScreenHint">Solo and Tutorial can still be played in portrait.</small>
+      </div>`;
+    document.body.appendChild(gate);
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .multiplayer-screen-gate{position:fixed;inset:0;z-index:22000;display:grid;place-items:center;padding:22px;background:rgba(5,7,20,.94);backdrop-filter:blur(12px)}
+      .multiplayer-screen-gate.hidden{display:none!important}
+      .multiplayer-screen-card{width:min(92vw,470px);padding:30px 25px;border-radius:25px;text-align:center;background:linear-gradient(160deg,#252365,#15173d 55%,#0d112d);border:2px solid #5bdfff;box-shadow:0 30px 80px rgba(0,0,0,.62),0 0 42px rgba(72,212,255,.2)}
+      .multiplayer-screen-icon{font-size:48px;line-height:1;color:#6de9ff;margin-bottom:8px}
+      .multiplayer-screen-card h2{margin:6px 0 8px;color:#fff;font-size:26px}
+      .multiplayer-screen-card p{margin:0;color:#c8cae8;font-size:13px;line-height:1.55}
+      .multiplayer-screen-card small{display:block;margin-top:12px;color:#7f8bb9;font-size:10px;line-height:1.4}
+    `;
+    document.head.appendChild(style);
+    return gate;
+  }
+
+  function screenGateReason(){
+    if (!coarse || !isMultiplayerMode()) return '';
+    if (!isLandscape()) return 'rotate';
+    if (landscapeWidth() < MIN_MULTIPLAYER_LANDSCAPE_WIDTH) return 'small';
+    return '';
+  }
+
+  function renderScreenGate(forceReason = ''){
+    const gate = ensureScreenGate();
+    gateReason = forceReason || screenGateReason();
+    const title = $('multiplayerScreenTitle');
+    const text = $('multiplayerScreenText');
+    const hint = $('multiplayerScreenHint');
+
+    if (!gateReason) {
+      gate.classList.add('hidden');
+      return false;
+    }
+
+    if (gateReason === 'rotate') {
+      title.textContent = 'Rotate your device';
+      text.textContent = 'Multiplayer is available in landscape view so both your board and live opponent boards stay readable.';
+      hint.textContent = 'Solo and Tutorial can still be played in portrait.';
+    } else {
+      title.textContent = 'Use a larger screen';
+      text.textContent = 'This screen is too small for a fair multiplayer battle layout, even in landscape.';
+      hint.textContent = 'Use a larger phone, tablet, iPad, laptop, or desktop. Solo and Tutorial remain available here.';
+    }
+    gate.classList.remove('hidden');
+    return true;
+  }
+
+  // Prevent multiplayer entry until a touch device meets the landscape / size requirement.
+  document.addEventListener('click', event => {
+    if (!coarse) return;
+    const trigger = event.target?.closest?.('#find2PBtn,#createRoomBtn,#joinRoomBtn,#battleAIBtn,#readyBtn,[data-multiplayer-entry]');
+    if (!trigger) return;
+    const reason = screenGateReason();
+    if (!reason) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    renderScreenGate(reason);
+  }, true);
+
+  window.addEventListener('resize', () => renderScreenGate());
+  window.addEventListener('orientationchange', () => setTimeout(() => renderScreenGate(), 120));
+
   if (!coarse) return;
 
-  const $ = id => document.getElementById(id);
   const boardShell = document.querySelector('.board-shell');
   const boardCanvas = $('board');
   if (!boardShell || !boardCanvas) return;
@@ -59,7 +153,6 @@
       }));
       return;
     }
-    // Fallback if the legacy control pad is ever removed from markup.
     try {
       if (action === 'left' && typeof move === 'function') move(-1);
       else if (action === 'right' && typeof move === 'function') move(1);
@@ -133,7 +226,6 @@
     while (hDelta > 0) { fireAction('right'); hDelta--; }
     lastHorizontalCell = horizontalCell;
 
-    // Downward drag only. Upward movement does not trigger a gameplay action.
     const verticalCell = Math.max(0, Math.trunc(dy / size.y));
     let vDelta = verticalCell - lastVerticalCell;
     vDelta = Math.max(0, Math.min(10, vDelta));
@@ -178,7 +270,6 @@
     if (event.pointerId === activePointer) activePointer = null;
   });
 
-  // The compact HOLD preview itself becomes the mobile HOLD control.
   document.addEventListener('pointerdown', event => {
     if (event.pointerType === 'mouse') return;
     const card = event.target?.closest?.('.hold-card');
@@ -187,8 +278,6 @@
     fireHold();
   }, {passive:false});
 
-  // Keep the tutorial instructions in sync with gesture controls without
-  // changing the desktop keyboard instructions.
   function rewriteTutorialCopy() {
     const quick = $('tutorialQuickControls');
     if (quick) {
