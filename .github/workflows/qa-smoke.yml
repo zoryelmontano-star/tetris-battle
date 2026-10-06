@@ -36,4 +36,4 @@ jobs:
       - name: Run workflow smoke tests
         env:
           QA_BASE_URL: http://127.0.0.1:4173/
-        run: npx playwright test tests/qa.spec.js --reporter=line --workers=1
+        run: npx playwright test tests --reporter=line --workers=1
