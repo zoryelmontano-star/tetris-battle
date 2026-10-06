@@ -1,7 +1,8 @@
-// v42: Solo opens and starts immediately after Start Solo; no Ready step.
+// v43: Solo has no Ready button. Start Solo opens the board, runs READY? 3-2-1-GO, then starts automatically.
 (() => {
   const $ = id => document.getElementById(id);
-  let autoStartArmed = false;
+  let countdownToken = 0;
+  let soloStarting = false;
 
   function prepareSoloUI(){
     try { gameMode = 'solo'; } catch {}
@@ -17,7 +18,9 @@
     document.querySelector('.room-pill')?.classList.add('hidden');
     $('readyBtn')?.classList.add('hidden');
     $('readyPanel')?.classList.add('hidden');
+    $('hostStartBtn')?.classList.add('hidden');
     $('startSoloGameBtn')?.classList.add('hidden');
+    $('startBtn')?.classList.add('hidden');
     $('duelMonitor')?.classList.add('hidden');
     $('partyStandings')?.classList.add('hidden');
     const grid = $('liveArenaGrid');
@@ -28,7 +31,7 @@
     }
     $('soloStatus')?.classList.remove('hidden');
     if ($('roomCodeDisplay')) $('roomCodeDisplay').textContent = 'SOLO';
-    if ($('playerState')) $('playerState').textContent = (typeof gameRunning !== 'undefined' && gameRunning) ? 'Playing' : 'Solo';
+    if ($('playerState')) $('playerState').textContent = (typeof gameRunning !== 'undefined' && gameRunning) ? 'Playing' : (soloStarting ? 'Starting' : 'Solo');
     return true;
   }
 
@@ -43,16 +46,59 @@
     return true;
   }
 
-  function beginSoloNow(){
-    if (!autoStartArmed) return;
-    if (!openSoloIfNeeded()) return;
+  function pulseOverlay(title, text='Get ready for your solo run.'){
+    const ov = $('overlay');
+    const t = $('overlayTitle');
+    const p = $('overlayText');
+    if (!ov || !t || !p) return;
+    t.textContent = title;
+    p.textContent = text;
+    ov.classList.remove('hidden');
+    t.style.animation = 'none';
+    void t.offsetWidth;
+    t.style.animation = '';
+  }
+
+  function wait(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function runSoloCountdown(){
+    const token = ++countdownToken;
+    soloStarting = true;
+    if (!openSoloIfNeeded()) { soloStarting = false; return; }
+    normalizeSoloGameUI();
+
     try {
-      if (typeof gameRunning === 'undefined' || !gameRunning) startGame();
-      autoStartArmed = false;
+      // Make sure no prior run is active while the countdown is showing.
+      if (typeof gameRunning !== 'undefined' && gameRunning) {
+        gameRunning = false;
+        try { clearInterval(timerInterval); } catch {}
+        try { cancelAnimationFrame(animationId); } catch {}
+        try { if (typeof stopMusic === 'function') stopMusic(); } catch {}
+      }
+    } catch {}
+
+    pulseOverlay('READY?','Your solo run starts automatically.');
+    await wait(550);
+    if (token !== countdownToken || gameMode !== 'solo') return;
+
+    for (const n of ['3','2','1']) {
+      pulseOverlay(n,'Get ready…');
+      await wait(1000);
+      if (token !== countdownToken || gameMode !== 'solo') return;
+    }
+
+    pulseOverlay('GO!','');
+    await wait(500);
+    if (token !== countdownToken || gameMode !== 'solo') return;
+
+    try {
+      startGame();
+      soloStarting = false;
       normalizeSoloGameUI();
       $('overlay')?.classList.add('hidden');
       if ($('playerState')) $('playerState').textContent = 'Playing';
     } catch (err) {
+      soloStarting = false;
       console.error('Solo auto-start failed', err);
     }
   }
@@ -60,6 +106,8 @@
   document.addEventListener('click', event => {
     const soloCard = event.target?.closest?.('#soloModeCard,.mode-card[data-mode="solo"]');
     if (soloCard) {
+      countdownToken++;
+      soloStarting = false;
       prepareSoloUI();
       setTimeout(() => {
         prepareSoloUI();
@@ -70,19 +118,22 @@
 
     const start = event.target?.closest?.('#startSoloBtn');
     if (start) {
-      autoStartArmed = true;
       prepareSoloUI();
-      // Original Solo handler chooses the selected Sprint/Marathon and opens the board.
-      // We then start that board automatically, removing the second Ready/Start step.
-      [0,60,140,260].forEach(delay => setTimeout(beginSoloNow, delay));
+      // Let Solo's original click handler select/open Sprint or Marathon first.
+      setTimeout(runSoloCountdown, 40);
+      return;
+    }
+
+    if (event.target?.closest?.('#quitBtn,[data-touch-action="quit"]')) {
+      countdownToken++;
+      soloStarting = false;
     }
   }, false);
 
   new MutationObserver(() => {
-    if (!autoStartArmed) return;
+    if (typeof gameMode === 'undefined' || gameMode !== 'solo') return;
     const gameEl = $('game');
     if (!gameEl || gameEl.classList.contains('hidden')) return;
-    if (typeof gameMode === 'undefined' || gameMode !== 'solo') return;
-    beginSoloNow();
+    normalizeSoloGameUI();
   }).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
 })();
