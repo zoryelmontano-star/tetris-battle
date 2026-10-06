@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17173a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Tetris Battle" />
+  <meta name="apple-mobile-web-app-title" content="KO Blocks" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -15,14 +15,14 @@
   <link rel="stylesheet" href="lobby-flow-v19.css?v=19" />
   <link rel="stylesheet" href="enhancements-v22.css?v=22" />
   <link rel="stylesheet" href="arcade-v26.css?v=26" />
-  <title>Tetris Battle</title>
+  <title>KO Blocks</title>
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark">T</span>
-        <div><p class="eyebrow">BATTLE ARCADE</p><h1>Tetris Battle</h1></div>
+        <span class="brand-mark">KO</span>
+        <div><p class="eyebrow">BLOCK ARCADE</p><h1>KO Blocks</h1></div>
       </div>
       <div class="audio-controls">
         <button id="musicBtn" class="mini-btn">♫ Music</button>
@@ -36,11 +36,11 @@
         <div class="falling-blocks" aria-hidden="true">
           <i class="tet t1"></i><i class="tet t2"></i><i class="tet t3"></i><i class="tet t4"></i><i class="tet t5"></i>
         </div>
-        <div class="block-logo" aria-label="Tetris Battle">
-          <span class="logo-row logo-top"><b>T</b><b>E</b><b>T</b><b>R</b><b>I</b><b>S</b></span>
-          <span class="logo-row logo-bottom"><b>B</b><b>A</b><b>T</b><b>T</b><b>L</b><b>E</b></span>
+        <div class="block-logo" aria-label="KO Blocks">
+          <span class="logo-row logo-top ko-logo-top"><b>K</b><b>O</b></span>
+          <span class="logo-row logo-bottom"><b>B</b><b>L</b><b>O</b><b>C</b><b>K</b><b>S</b></span>
         </div>
-        <p>Battle, Party, or Play Solo</p>
+        <p><strong>Block. Attack. Survive.</strong><br><span>Knock out your rivals.</span></p>
       </div>
 
       <div class="lobby-head">
@@ -49,44 +49,44 @@
 
       <div class="mode-grid">
         <button class="mode-card active" data-mode="duel">
-          <span class="mode-icon">▦▦</span><span><strong>2P Battle</strong><small>Exactly 2 players · first to 5 knockouts wins</small></span>
+          <span class="mode-icon">▦▦</span><span><strong>1v1 Battle</strong><small>First to 5 KOs wins</small></span>
         </button>
         <button class="mode-card" data-mode="party">
-          <span class="mode-icon">✦</span><span><strong>Party Session</strong><small>2–6 players · garbage + KOs · 2-minute battle royale</small></span>
+          <span class="mode-icon">✦</span><span><strong>Battle Arena</strong><small>2 to 6 players · Multiplayer knockout battle</small></span>
         </button>
       </div>
 
       <div class="lobby-grid">
-        <label id="playerNameField">Player name<input id="playerName" maxlength="16" value="Player 1" placeholder="Your battle name" /></label>
-        <label class="party-only room-name-field">Room / Session name<input id="roomName" maxlength="30" placeholder="Montano Family Night" /></label>
-        <label class="party-only room-code-field">Room code<input id="roomCode" maxlength="12" placeholder="MONTANO" /></label>
+        <label id="playerNameField">Player name<input id="playerName" maxlength="16" value="" placeholder="Enter your player name" /></label>
+        <label class="party-only room-name-field">Room / Session name<input id="roomName" maxlength="30" placeholder="Family Game Night" /></label>
+        <label class="party-only room-code-field">Room code<input id="roomCode" maxlength="12" placeholder="BATTLE" /></label>
       </div>
 
       <div id="duelQuickPanel">
-        <div class="duel-panel-head"><span>⚔</span><div><strong>Find a 2P Opponent</strong><small>No room code. We’ll match you with another player.</small></div></div>
+        <div class="duel-panel-head"><span>⚔</span><div><strong>Find a 1v1 Rival</strong><small>No room code. We’ll match you with one opponent.</small></div></div>
         <button id="find2PBtn" type="button">Find Opponent</button>
         <p>Exactly 2 players · both players must be Ready before the match starts.</p>
       </div>
 
       <div class="actions party-only">
-        <button id="createRoomBtn" class="primary">Create Party</button>
-        <button id="joinRoomBtn">Join Party</button>
+        <button id="createRoomBtn" class="primary">Create Arena</button>
+        <button id="joinRoomBtn">Join Arena</button>
       </div>
       <div id="roomStatus" class="status">Enter your player name, then find an opponent.</div>
 
       <div id="recentRoomsPanel" class="party-only">
-        <div class="recent-head"><strong>Recent Party Rooms</strong><span>saved on this device</span></div>
-        <div id="recentRoomPills" class="recent-room-pills"><span class="muted">Your recent Party rooms will appear here.</span></div>
+        <div class="recent-head"><strong>Recent Battle Arenas</strong><span>saved on this device</span></div>
+        <div id="recentRoomPills" class="recent-room-pills"><span class="muted">Your recent private arenas will appear here.</span></div>
       </div>
 
-      <p class="fineprint">2P Battle uses automatic online matchmaking with no room code. Party supports up to 6 players using a session name and optional custom code. Solo includes Sprint 40 Lines and Marathon.</p>
+      <p class="fineprint">1v1 uses automatic matchmaking. Battle Arena is private and invite/code based for 2 to 6 players. Solo includes Sprint and Marathon.</p>
     </section>
 
     <section id="game" class="game-layout hidden">
       <div class="arena-card card" id="arenaCard">
         <div class="battle-strip">
           <div class="player-badge"><span class="avatar">P1</span><div><small>PLAYER</small><strong id="playerLabel">Player 1</strong></div></div>
-          <div class="mode-pill" id="modePill">2P BATTLE</div>
+          <div class="mode-pill" id="modePill">1V1 BATTLE</div>
           <div class="room-pill">ROOM <b id="roomCodeDisplay">------</b></div>
         </div>
 
@@ -100,7 +100,7 @@
         <div class="play-stage">
           <div class="board-shell">
             <div id="panicLabel" class="panic-label hidden">FINAL 10!</div>
-            <canvas id="board" width="300" height="600" aria-label="Tetris board"></canvas>
+            <canvas id="board" width="300" height="600" aria-label="KO Blocks game board"></canvas>
             <div id="gameToast" class="game-toast hidden"><strong id="toastTitle"></strong><span id="toastSub"></span></div>
             <div id="overlay" class="overlay">
               <h2 id="overlayTitle">Ready?</h2>
@@ -176,5 +176,6 @@
   <script src="mobile-autofit-v43.js?v=43"></script>
   <script src="touch-controls-v43.js?v=43"></script>
   <script src="solo-entry-hotfix-v41.js?v=43"></script>
+  <script src="ko-blocks-ui-v44.js?v=44"></script>
 </body>
 </html>
