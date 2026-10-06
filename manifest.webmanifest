@@ -1,11 +1,11 @@
 {
-  "name": "Tetris Battle",
-  "short_name": "Tetris Battle",
+  "name": "KO Blocks",
+  "short_name": "KO Blocks",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#171419",
   "theme_color": "#171419",
-  "description": "A two-minute arcade Tetris battle with combos, perfect clears, music and session records.",
+  "description": "A private multiplayer block battle arcade with 1v1, Battle Arena, Solo Challenge, and Tutorial modes.",
   "icons": [
     {
       "src": "icon.svg",
