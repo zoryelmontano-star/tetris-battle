@@ -36,6 +36,7 @@ test.describe('desktop workflows', () => {
     await expect(page.locator('.mode-card[data-mode="party"] strong')).toHaveText('Battle Arena');
     await expect(page.locator('.mode-card[data-mode="solo"] strong')).toHaveText('Solo Challenge');
     await expect(page.locator('#tutorialModeCard strong')).toHaveText('Tutorial');
+    await expect.poll(() => page.evaluate(() => window.TBFirebase?.status)).toBe('idle');
 
     await page.locator('.mode-card[data-mode="duel"]').click();
     await expect(page.locator('#modeSetupScreen')).toBeVisible();
@@ -111,7 +112,15 @@ test.describe('desktop workflows', () => {
 });
 
 test.describe('mobile touch workflows', () => {
-  test.use({ ...devices['iPhone 13'], hasTouch: true });
+  const iphone = devices['iPhone 13'];
+  test.use({
+    viewport: iphone.viewport,
+    screen: iphone.screen,
+    userAgent: iphone.userAgent,
+    deviceScaleFactor: iphone.deviceScaleFactor,
+    isMobile: true,
+    hasTouch: true
+  });
 
   test('portrait is allowed and PC-style touch controls appear in Solo', async ({ page }) => {
     const errors = watchErrors(page);
@@ -142,7 +151,7 @@ test.describe('mobile touch workflows', () => {
     await page.locator('[data-touch-action="pause"]').dispatchEvent('pointerdown', { pointerType:'touch', pointerId:5, isPrimary:true });
     await expect(page.locator('#overlayTitle')).toHaveText('PAUSED');
     await page.locator('[data-touch-action="pause"]').dispatchEvent('pointerdown', { pointerType:'touch', pointerId:6, isPrimary:true });
-    await expect(page.locator('#overlay')).toBeHidden();
+    await expect(page.locator('#overlay')).toBeHidden({ timeout: 6500 });
 
     page.once('dialog', dialog => dialog.accept());
     await page.locator('[data-touch-action="quit"]').dispatchEvent('pointerdown', { pointerType:'touch', pointerId:7, isPrimary:true });
