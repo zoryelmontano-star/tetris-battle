@@ -1,4 +1,4 @@
-// Tetris Battle v10: full live board stage for 1v1 and 2–8 player Party.
+// Tetris Battle v10: full live board stage for 1v1 and up to 6-player Party.
 (() => {
   const $ = id => document.getElementById(id);
   const gameEl = $('game');
@@ -47,14 +47,14 @@
     .live-arena-grid.duel .local-live-tile .play-stage{grid-template-columns:90px minmax(0,300px) 90px!important;gap:7px!important;margin:0!important}
     .live-arena-grid.duel .local-live-tile .hold-panel,.live-arena-grid.duel .local-live-tile .next-panel{width:90px!important}
     .live-arena-grid.duel .local-live-tile .board-shell{width:min(100%,300px)!important}
-    .live-arena-grid.party .local-live-tile .play-stage{grid-template-columns:46px minmax(0,188px) 46px!important;gap:4px!important;margin:0!important}
-    .live-arena-grid.party .local-live-tile .hold-panel,.live-arena-grid.party .local-live-tile .next-panel{width:46px!important;padding:4px!important}
+    .live-arena-grid.party .local-live-tile .play-stage{grid-template-columns:64px minmax(0,270px) 64px!important;gap:6px!important;margin:0!important;justify-content:center!important}
+    .live-arena-grid.party .local-live-tile .hold-panel,.live-arena-grid.party .local-live-tile .next-panel{width:64px!important;padding:5px!important}
     .live-arena-grid.party .local-live-tile .hold-panel small,.live-arena-grid.party .local-live-tile .streak-box{display:none!important}
-    .live-arena-grid.party .local-live-tile .hold-touch-btn{font-size:7px;padding:5px 1px}.live-arena-grid.party .local-live-tile .board-shell{width:min(100%,188px)!important}
+    .live-arena-grid.party .local-live-tile .hold-touch-btn{font-size:7px;padding:5px 1px}.live-arena-grid.party .local-live-tile .board-shell{width:min(100%,270px)!important}
     .live-arena-grid.party .local-live-tile .next-card span,.live-arena-grid.party .local-live-tile .hold-card>span{display:none}
     .live-arena-grid.party .live-player-tile{padding:6px}.live-arena-grid.party .live-player-head{grid-template-columns:27px minmax(0,1fr);margin-bottom:5px}.live-arena-grid.party .remote-board-shell{max-width:188px}
     @media(max-width:1050px){.live-arena-grid.party{grid-template-columns:repeat(3,minmax(0,1fr))}.live-arena-grid.duel .local-live-tile .play-stage{grid-template-columns:62px minmax(0,260px) 62px!important}.live-arena-grid.duel .local-live-tile .hold-panel,.live-arena-grid.duel .local-live-tile .next-panel{width:62px!important}.live-arena-grid.duel .local-live-tile .board-shell{max-width:260px!important}}
-    @media(max-width:720px){.live-arena-grid.duel{grid-template-columns:1fr 1fr;gap:6px}.live-arena-grid.party{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.live-player-tile{padding:5px}.live-player-head{grid-template-columns:24px minmax(0,1fr);gap:5px}.live-ko{grid-column:1/-1;text-align:center}.live-arena-grid.duel .local-live-tile .play-stage{grid-template-columns:minmax(0,1fr)!important}.live-arena-grid.duel .local-live-tile .hold-panel,.live-arena-grid.duel .local-live-tile .next-panel{display:none!important}.live-arena-grid.duel .local-live-tile .board-shell{width:100%!important}.remote-board-shell{padding:4px;border-radius:12px}}
+    @media(max-width:720px){.live-arena-grid.duel{grid-template-columns:1fr 1fr;gap:6px}.live-arena-grid.party{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.live-player-tile{padding:5px}.live-player-head{grid-template-columns:24px minmax(0,1fr);gap:5px}.live-ko{grid-column:1/-1;text-align:center}.live-arena-grid.duel .local-live-tile .play-stage{grid-template-columns:56px minmax(0,1fr) 0!important;gap:4px!important}.live-arena-grid.duel .local-live-tile .hold-panel{display:block!important;width:56px!important;padding:4px!important}.live-arena-grid.duel .local-live-tile .next-panel{display:none!important}.live-arena-grid.duel .local-live-tile .board-shell{width:100%!important}.remote-board-shell{padding:4px;border-radius:12px}}
   `;
   document.head.appendChild(style);
 
@@ -103,7 +103,7 @@
     const now = Date.now();
     for (const [id,p] of remotes) if (now - p.seen > 7000) remotes.delete(id);
     const active = [...remotes.entries()].filter(([,p]) => p.mode === gameMode).sort((a,b) => (b[1].score||0) - (a[1].score||0));
-    const visible = party ? active.slice(0,7) : active.slice(0,1);
+    const visible = party ? active.slice(0,5) : active.slice(0,1);
     const keep = new Set(visible.map(([id]) => `live-${id}`));
     grid.querySelectorAll('.remote-live-tile').forEach(t => { if (!keep.has(t.id) && t.id !== 'live-waiting') t.remove(); });
     document.getElementById('live-waiting')?.remove();
@@ -125,7 +125,7 @@
       head.querySelector('small').childNodes[0].textContent = `${Number(p.score||0).toLocaleString()} pts · `;
       head.querySelector('.live-ko').textContent = `${Number(p.ko||0)} / 5 KO`;
       tile.querySelector('.remote-status-row b').textContent = `${Number(p.score||0).toLocaleString()} pts`;
-      drawRemote(tile.querySelector('canvas'), p.board);
+      drawRemote(tile.querySelector('.remote-board-shell canvas'), p.board);
       tile.style.order = party ? place : 2;
     });
 
@@ -133,18 +133,20 @@
       const tile = ensureRemoteTile('waiting');
       tile.style.order = 2;
       tile.querySelector('.live-player-head strong').textContent = 'WAITING FOR RIVAL';
-      tile.querySelector('.live-player-head small').textContent = 'Join the same room in another tab';
+      tile.querySelector('.live-player-head small').textContent = 'Finding an online opponent…';
       tile.querySelector('.live-ko').textContent = '0 / 5 KO';
       tile.querySelector('.remote-waiting').classList.remove('hidden');
-      drawRemote(tile.querySelector('canvas'), Array.from({length:20},()=>Array(10).fill('')));
+      drawRemote(tile.querySelector('.remote-board-shell canvas'), Array.from({length:20},()=>Array(10).fill('')));
     }
   }
 
   function sendState() {
     if (!window.TBMultiplayer || !TBMultiplayer.room) return;
+    const sent = gameMode==='party' ? Number(window.TBPartyBattle?.localLinesSent||0) : Number(window.TBBattle?.totalSent||0);
     TBMultiplayer.send('live_state', {
-      name: $('playerName')?.value || 'Player', mode: gameMode, board, score: Number(score||0),
-      ko: Number($('myKO')?.textContent || 0), timeLeft, sessionWins: Number(sessionWins||0),
+      name: $('playerName')?.value || 'Player', mode: gameMode, board, hold:window.TBHold?.type||'', score: Number(score||0),
+      ko: gameMode==='party' ? Number(window.TBPartyBattle?.localKOs||0) : Number($('myKO')?.textContent || 0),
+      timeLeft, sessionWins: Number(sessionWins||0), totalSent:sent,
       ready: !!window.TBReadyState?.localReady
     });
   }
@@ -164,11 +166,12 @@
       if (msg.type === 'live_state') {
         remotes.set(msg.playerId, {
           name:p.name||'Player', mode:p.mode||'duel', board:Array.isArray(p.board)?p.board:Array.from({length:20},()=>Array(10).fill('')),
-          score:Number(p.score||0), ko:Number(p.ko||0), timeLeft:Number(p.timeLeft||120), sessionWins:Number(p.sessionWins||0), ready:!!p.ready, seen:Date.now()
+          hold:/^[IJLOSTZ]$/.test(String(p.hold||''))?String(p.hold):'', score:Number(p.score||0), ko:Number(p.ko||0),
+          timeLeft:Number(p.timeLeft||120), sessionWins:Number(p.sessionWins||0), totalSent:Number(p.totalSent||0), ready:!!p.ready, seen:Date.now()
         });
       }
       if (msg.type === 'ready_state') {
-        const prior = remotes.get(msg.playerId) || {board:Array.from({length:20},()=>Array(10).fill('')), score:0, ko:0, mode:p.mode||gameMode};
+        const prior = remotes.get(msg.playerId) || {board:Array.from({length:20},()=>Array(10).fill('')), hold:'', score:0, ko:0, mode:p.mode||gameMode};
         remotes.set(msg.playerId, {...prior, name:p.name||prior.name||'Player', mode:p.mode||prior.mode, ready:!!p.ready, seen:Date.now()});
       }
       render();
@@ -182,6 +185,7 @@
     return r;
   };
 
+  window.addEventListener('tb-hold-change',()=>sendState());
   document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => setTimeout(() => { sendState(); render(); }, 20)));
   window.TBLiveGrid = { remotes, render, sendState };
   render();
