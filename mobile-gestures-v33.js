@@ -1,5 +1,14 @@
-// v33: Mobile gesture controls to replace the large on-screen control pad.
+// v34: Gesture controls on touch devices; no on-screen gameplay control pad on any device.
 (() => {
+  // The directional/rotate/drop pad and dedicated HOLD button are implementation hooks only.
+  // Keep them in the DOM for existing event wiring, but never show them in the UI.
+  const hiddenControlStyle = document.createElement('style');
+  hiddenControlStyle.textContent = `
+    .touch-controls{display:none!important}
+    .hold-touch-btn{display:none!important}
+  `;
+  document.head.appendChild(hiddenControlStyle);
+
   const coarse = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
   if (!coarse) return;
 
@@ -12,8 +21,6 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .tb-gesture-controls .touch-controls{display:none!important}
-    .tb-gesture-controls .hold-touch-btn{display:none!important}
     .tb-gesture-controls .board-shell,
     .tb-gesture-controls #board{touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
     .tb-gesture-controls .hold-card{cursor:pointer;touch-action:manipulation}
@@ -39,7 +46,7 @@
   const controlsNote = document.querySelector('.controls-note');
   if (controlsNote) controlsNote.textContent = 'Touch: drag left/right to move · drag down to soft drop · tap to rotate · double-tap to hard drop · tap HOLD to swap · Pause button to pause';
 
-  // Use the original control buttons as the action bus so all existing hooks,
+  // Use the hidden legacy buttons as the action bus so all existing hooks,
   // tutorial tracking, audio, and future wrappers still receive the same events.
   function fireAction(action) {
     const btn = document.querySelector(`.touch-controls [data-action="${action}"]`);
