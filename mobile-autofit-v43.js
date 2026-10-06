@@ -1,4 +1,4 @@
-// v43: fit touch gameplay to the available viewport in portrait or landscape.
+// v46: fit touch gameplay to the available viewport in portrait or landscape without polling the whole DOM.
 (() => {
   const touchCapable = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window || !!window.matchMedia?.('(pointer: coarse)').matches;
   if (!touchCapable) return;
@@ -83,7 +83,6 @@
     body.tb-touch-fit .streak-box{padding:4px 2px!important;border-radius:7px!important}
     body.tb-touch-fit .streak-box strong{font-size:10px!important}
 
-    /* Opponents stay intentionally smaller than the local board. */
     body.tb-touch-fit .remote-live-tile{align-self:center!important;justify-self:center!important;width:100%!important;max-width:145px!important;height:auto!important;max-height:100%!important;padding:3px!important}
     body.tb-touch-fit .remote-live-tile .live-player-head{grid-template-columns:18px minmax(0,1fr)!important;height:auto!important;min-height:18px!important}
     body.tb-touch-fit .remote-live-tile .live-ko{grid-column:1/-1!important;text-align:center!important;font-size:6px!important}
@@ -125,18 +124,25 @@
   function isGameVisible(){
     return !game.classList.contains('hidden') && getComputedStyle(game).display !== 'none';
   }
+  let lastHeight = 0;
+  let lastFit = null;
   function refresh(){
     const {height}=viewportSize();
-    document.documentElement.style.setProperty('--tb-vh',`${height}px`);
     const shouldFit=isGameVisible();
-    document.body.classList.toggle('tb-touch-fit',shouldFit);
-    document.body.classList.toggle('tb-touch-battle',shouldFit);
+    if (height !== lastHeight) {
+      lastHeight = height;
+      document.documentElement.style.setProperty('--tb-vh',`${height}px`);
+    }
+    if (shouldFit !== lastFit) {
+      lastFit = shouldFit;
+      document.body.classList.toggle('tb-touch-fit',shouldFit);
+      document.body.classList.toggle('tb-touch-battle',shouldFit);
+    }
   }
 
+  new MutationObserver(refresh).observe(game,{attributes:true,attributeFilter:['class','style']});
   window.addEventListener('resize',refresh,{passive:true});
-  window.addEventListener('orientationchange',()=>[0,100,250,500,900].forEach(d=>setTimeout(refresh,d)),{passive:true});
+  window.addEventListener('orientationchange',()=>[0,120,350].forEach(d=>setTimeout(refresh,d)),{passive:true});
   window.visualViewport?.addEventListener('resize',refresh,{passive:true});
-  new MutationObserver(refresh).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
-  setInterval(refresh,700);
   refresh();
 })();
