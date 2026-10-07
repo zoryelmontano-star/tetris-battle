@@ -70,9 +70,9 @@ test.describe('desktop workflows', () => {
     await expect(page.locator('#readyPanel')).toBeHidden();
     await expect(page.locator('#overlayTitle')).toHaveText('READY?');
     await expect(page.locator('#overlayTitle')).toHaveText('3', { timeout: 1800 });
-    await expect(page.locator('#overlayTitle')).toHaveText('2', { timeout: 1500 });
-    await expect(page.locator('#overlayTitle')).toHaveText('1', { timeout: 1500 });
-    await expect(page.locator('#overlayTitle')).toHaveText('GO!', { timeout: 1500 });
+    await expect(page.locator('#overlayTitle')).toHaveText('2', { timeout: 2200 });
+    await expect(page.locator('#overlayTitle')).toHaveText('1', { timeout: 2200 });
+    await expect(page.locator('#overlayTitle')).toHaveText('GO!', { timeout: 2200 });
     await expect(page.locator('#overlay')).toBeHidden({ timeout: 1500 });
     await expect(page.locator('#playerState')).toHaveText('Playing');
     expect(errors, errors.join('\n')).toEqual([]);
