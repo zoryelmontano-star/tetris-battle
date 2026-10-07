@@ -22,21 +22,25 @@
   if (!touchCapable) return;
   document.body.classList.add('tb-touch-device');
 
+  function setTextIfChanged(el,value){
+    if (el && el.textContent !== value) el.textContent = value;
+  }
+
   function rewriteTutorialCopy(){
     const quick = $('tutorialQuickControls');
     if (quick) {
       const spans = quick.querySelectorAll('span');
-      if (spans[1]) spans[1].textContent = 'Right-side controls: ◀ and ▶ move · ⟳ in the up-arrow position rotates · ▼ soft drops. Use the long HARD DROP bar to drop instantly. Tap the HOLD box itself to hold/swap. Pause is at the top.';
+      if (spans[1]) setTextIfChanged(spans[1], 'Right-side controls: ◀ and ▶ move · ⟳ in the up-arrow position rotates · ▼ soft drops. Use the long HARD DROP bar to drop instantly. Tap the HOLD box itself to hold/swap. Pause is at the top.');
     }
     const title = $('tutorialCoachTitle')?.textContent || '';
     const text = $('tutorialCoachText');
     if (!text) return;
-    if (title === 'Move your piece') text.textContent = 'Use ◀ and ▶ on the right side to move the falling piece.';
-    else if (title === 'Rotate') text.textContent = 'Tap ⟳ in the top position of the arrow cluster to rotate.';
-    else if (title === 'Soft Drop') text.textContent = 'Press or hold ▼ on the right-side arrow cluster to move down faster.';
-    else if (title === 'Hard Drop') text.textContent = 'Tap the long HARD DROP bar near the bottom-left to instantly lock the piece.';
-    else if (title === 'Use HOLD') text.textContent = 'Tap the HOLD preview box itself to save the current piece or swap it back.';
-    else if (title === 'Pause safely') text.textContent = 'Tap Pause at the top. Resume continues from the same board state.';
+    if (title === 'Move your piece') setTextIfChanged(text, 'Use ◀ and ▶ on the right side to move the falling piece.');
+    else if (title === 'Rotate') setTextIfChanged(text, 'Tap ⟳ in the top position of the arrow cluster to rotate.');
+    else if (title === 'Soft Drop') setTextIfChanged(text, 'Press or hold ▼ on the right-side arrow cluster to move down faster.');
+    else if (title === 'Hard Drop') setTextIfChanged(text, 'Tap the long HARD DROP bar near the bottom-left to instantly lock the piece.');
+    else if (title === 'Use HOLD') setTextIfChanged(text, 'Tap the HOLD preview box itself to save the current piece or swap it back.');
+    else if (title === 'Pause safely') setTextIfChanged(text, 'Tap Pause at the top. Resume continues from the same board state.');
   }
 
   rewriteTutorialCopy();
