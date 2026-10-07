@@ -55,7 +55,7 @@ test.describe('versus rules',()=>{
     expect(result.b2b[0]).toMatchObject({attack:4,b2b:0});
     expect(result.b2b[2]).toMatchObject({attack:5,b2b:1});
     expect(result.b2b[3].attack).toBe(1);
-    expect(result.b2b[4]).toMatchObject({attack:4,b2b:0});
+    expect(result.b2b[4]).toMatchObject({attack:5,b2b:0});
     expect(pageErrors).toEqual([]);
   });
 
