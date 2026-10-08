@@ -30,7 +30,9 @@
 
   let localState=freshState(),aiState=freshState();
   let localSent=0,aiSent=0,aiScore=0,pendingAIAttack=0;
+  let localGenerated=0,localCancelled=0,aiGenerated=0,aiCancelled=0;
   let currentClearOverride=null,lastActionRotate=false;
+  let lastAIResolution=null,lastIncomingReason='';
   let localIncoming=[],aiIncoming=[];
   const remoteSent=new Map();
   const localId=()=>String(window.TBMultiplayer?.playerId||'local');
@@ -76,7 +78,28 @@
     if($('incomingMeter'))$('incomingMeter').style.width=`${Math.min(100,n*8)}%`;
     let strip=$('koIncomingStrip');
     if(!strip&&$('arenaCard')){strip=document.createElement('div');strip.id='koIncomingStrip';strip.className='ko-incoming-strip hidden';strip.innerHTML='<span>INCOMING</span><strong>0</strong><small>clear lines to cancel</small>';$('arenaCard').appendChild(strip);}
-    if(strip){strip.classList.toggle('hidden',n<=0);strip.querySelector('strong').textContent=n;}
+    if(strip){
+      strip.classList.toggle('hidden',n<=0);
+      strip.querySelector('strong').textContent=n;
+      const hint=strip.querySelector('small');
+      if(hint) hint.textContent=n>0 ? `${lastIncomingReason ? lastIncomingReason+' · ' : ''}clear to cancel` : 'clear lines to cancel';
+    }
+  }
+
+  function showAIAction(res,{cancelled=0,outbound=0}={}){
+    if(!res||!res.lines)return;
+    const tile=$('live-ai-rival');
+    const host=tile?.querySelector('.remote-board-shell')||tile;
+    if(!host)return;
+    host.querySelector('.ai-attack-callout')?.remove();
+    const el=document.createElement('div');
+    el.className='ai-attack-callout';
+    const comboText=res.combo>0 ? ` · ${res.combo}-COMBO` : '';
+    const b2bText=res.b2bBonus>0 ? ' · B2B' : '';
+    const effect=outbound>0 ? `+${outbound} INCOMING` : (cancelled>0 ? `${cancelled} CANCELLED` : 'NO GARBAGE');
+    el.innerHTML=`<strong>AI ${res.label}${comboText}${b2bText}</strong><span>${effect}</span>`;
+    host.appendChild(el);
+    setTimeout(()=>el.remove(),1450);
   }
 
   // T-Spin = T piece, last successful manipulation was a rotation, 3+ pivot corners occupied.
@@ -145,6 +168,7 @@
       const perfect=lines>0&&board.every(row=>row.every(Boolean)||row.every(cell=>!cell));
       const res=resolveClear(lines,{tSpin:!!ctx.tSpin,perfect,state:localState});
       const defence=cancelQueue(localIncoming,res.attack);
+      if(lines>0){localGenerated+=res.attack;localCancelled+=defence.cancelled;}
       currentClearOverride={mode:gameMode,res,outbound:defence.outbound,cancelled:defence.cancelled,sent:false};
       const beforeScore=Number(typeof score!=='undefined'?score:0);
       const out=prior.apply(this,a);
@@ -200,14 +224,55 @@
 
   // AI sends its resolved attack, not simply the number of rows it cleared.
   if(window.TBBattle?.aiAttack){
-    window.TBBattle.aiAttack=function(){const n=Math.max(0,Number(pendingAIAttack)||0);pendingAIAttack=0;if(n>0){queueBatch(localIncoming,n,'ai','AI Rival');aiSent+=n;updateIncomingUI();exposeStats();}};
+    window.TBBattle.aiAttack=function(){
+      const n=Math.max(0,Number(pendingAIAttack)||0);
+      const res=lastAIResolution;
+      pendingAIAttack=0;
+      if(n>0){
+        const reason=res?.label ? `AI ${res.label}${res.combo>0?` · ${res.combo}-COMBO`:''}` : 'AI ATTACK';
+        lastIncomingReason=reason;
+        queueBatch(localIncoming,n,'ai','AI Rival');
+        aiSent+=n;
+      }
+      if(res) showAIAction(res,{cancelled:Number(res.cancelled||0),outbound:n});
+      updateIncomingUI();exposeStats();
+      lastAIResolution=null;
+    };
   }
+
+  // Every AI lock is reported. A non-clearing lock must break the AI combo,
+  // exactly like a human piece that locks without clearing a line.
+  window.addEventListener('tb-ai-lock',event=>{
+    const cleared=Math.max(0,Number(event.detail?.cleared)||0);
+    if(cleared===0){
+      resolveClear(0,{state:aiState});
+      exposeStats();
+    }
+  });
+
+  window.addEventListener('tb-ai-ko',()=>{
+    aiState=freshState();
+    aiIncoming=[];
+    pendingAIAttack=0;
+    lastAIResolution=null;
+    clearTimeout(aiTankTimer);
+    exposeStats();
+  });
+
   window.addEventListener('tb-ai-lines',event=>{
     const lines=Math.max(0,Number(event.detail?.cleared)||0),total=Math.max(0,Number(event.detail?.total)||0);
-    if(total===0&&!lines){aiState=freshState();aiSent=0;aiScore=0;pendingAIAttack=0;aiIncoming=[];clearTimeout(aiTankTimer);exposeStats();return;}
+    if(total===0&&!lines){
+      aiState=freshState();aiSent=0;aiScore=0;pendingAIAttack=0;aiIncoming=[];
+      aiGenerated=0;aiCancelled=0;lastAIResolution=null;lastIncomingReason='';
+      clearTimeout(aiTankTimer);exposeStats();return;
+    }
     if(!lines)return;
     const res=resolveClear(lines,{tSpin:false,perfect:false,state:aiState});
-    const defence=cancelQueue(aiIncoming,res.attack);pendingAIAttack=defence.outbound;
+    const defence=cancelQueue(aiIncoming,res.attack);
+    aiGenerated+=res.attack;
+    aiCancelled+=defence.cancelled;
+    pendingAIAttack=defence.outbound;
+    lastAIResolution={...res,cancelled:defence.cancelled,outbound:defence.outbound};
     const base=[0,100,300,500,800][Math.min(4,lines)]||800;aiScore+=base+res.combo*75;
     if(aiIncoming.length)scheduleAITank();else clearTimeout(aiTankTimer);
     exposeStats();
@@ -219,7 +284,13 @@
   }
   function exposeStats(){
     window.TBAIStats=window.TBAIStats||{};window.TBAIStats.linesSent=aiSent;window.TBAIStats.score=aiScore;
-    window.KOVersusStats={localSent,aiSent,aiScore,localIncoming:totalQueued(localIncoming),aiIncoming:totalQueued(aiIncoming),remoteSent};
+    window.KOVersusStats={
+      localSent,aiSent,aiScore,
+      localGenerated,localCancelled,aiGenerated,aiCancelled,
+      localCombo:Math.max(0,localState.consecutive-1),
+      aiCombo:Math.max(0,aiState.consecutive-1),
+      localIncoming:totalQueued(localIncoming),aiIncoming:totalQueued(aiIncoming),remoteSent
+    };
     try{if(window.TBBattle)Object.defineProperty(window.TBBattle,'totalSent',{configurable:true,get:()=>localSent});}catch{}
     try{if(window.TBPartyBattle)Object.defineProperty(window.TBPartyBattle,'localLinesSent',{configurable:true,get:()=>localSent});}catch{}
     const tile=$('live-ai-rival');if(tile){const sent=tile.querySelector('.hold-sent-value');if(sent)sent.textContent=aiSent;const small=tile.querySelector('.live-player-head small');if(small)small.textContent=`${aiScore.toLocaleString()} pts · CPU`;const status=tile.querySelector('.remote-status-row b');if(status)status.textContent=`${aiScore.toLocaleString()} pts`;}
@@ -250,7 +321,13 @@
 
   if(typeof startGame==='function'){
     const prior=startGame;
-    startGame=function(...a){localState=freshState();localSent=0;localIncoming=[];lastActionRotate=false;if(window.TBAIMode){aiState=freshState();aiSent=0;aiScore=0;aiIncoming=[];pendingAIAttack=0;clearTimeout(aiTankTimer);}const out=prior.apply(this,a);exposeStats();updateIncomingUI();return out;};
+    startGame=function(...a){
+      localState=freshState();localSent=0;localIncoming=[];localGenerated=0;localCancelled=0;lastActionRotate=false;lastIncomingReason='';
+      if(window.TBAIMode){
+        aiState=freshState();aiSent=0;aiScore=0;aiIncoming=[];pendingAIAttack=0;aiGenerated=0;aiCancelled=0;lastAIResolution=null;clearTimeout(aiTankTimer);
+      }
+      const out=prior.apply(this,a);exposeStats();updateIncomingUI();return out;
+    };
   }
 
   const style=document.createElement('style');
@@ -258,7 +335,8 @@
     .ko-incoming-strip{position:absolute;right:12px;top:82px;z-index:42;min-width:104px;padding:7px 9px;border-radius:11px;background:linear-gradient(180deg,#77304e,#461f3c);border:1px solid #ff809e;text-align:center;box-shadow:0 5px 18px rgba(0,0,0,.3)}.ko-incoming-strip.hidden{display:none!important}.ko-incoming-strip span,.ko-incoming-strip small{display:block;color:#ffc2d0;font-size:7px;font-weight:1000;letter-spacing:.1em}.ko-incoming-strip strong{display:block;color:#fff;font-size:23px;line-height:1.05}
     .ko-special-fx-layer{position:fixed;inset:0;z-index:14950;pointer-events:none;display:grid;place-items:center;overflow:hidden}.ko-special-fx{position:absolute;top:18%;max-width:min(92vw,520px);padding:13px 20px;border-radius:17px;text-align:center;background:linear-gradient(180deg,rgba(43,38,106,.97),rgba(17,18,52,.97));border:2px solid #70e8ff;box-shadow:0 16px 44px rgba(0,0,0,.46),0 0 30px rgba(92,224,255,.24);animation:koSpecialPop 1.25s ease both}.ko-special-fx strong{display:block;color:#fff;font-size:clamp(20px,4vw,36px);font-weight:1000;text-shadow:0 3px 0 rgba(0,0,0,.28)}.ko-special-fx span{display:block;margin-top:4px;color:#8cecff;font-size:11px;font-weight:1000}.ko-special-fx.tier-2{border-color:#a98aff}.ko-special-fx.tier-3{border-color:#ff82c9;box-shadow:0 16px 44px rgba(0,0,0,.46),0 0 40px rgba(255,91,188,.3)}.ko-special-fx.tier-4{border-color:#ffe66d;background:linear-gradient(180deg,rgba(104,61,129,.98),rgba(34,26,75,.98));box-shadow:0 16px 44px rgba(0,0,0,.46),0 0 48px rgba(255,225,89,.38)}.ko-special-fx.tier-4 strong{color:#fff17d}.ko-special-fx.tier-4 span{color:#fff}
     @keyframes koSpecialPop{0%{opacity:0;transform:translateY(28px) scale(.68)}22%{opacity:1;transform:translateY(0) scale(1.1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-34px) scale(.93)}}.ko-combo-impact{animation:koImpact53 .62s ease!important}@keyframes koImpact53{0%,100%{filter:none}28%{filter:brightness(1.2) saturate(1.25);transform:scale(1.008)}55%{filter:brightness(1.08)}}
-    @media(max-width:720px){.ko-incoming-strip{top:66px;right:6px;min-width:78px;padding:5px}.ko-incoming-strip strong{font-size:18px}.ko-special-fx{top:12%;padding:10px 14px}}
+    .remote-board-shell{position:relative}.ai-attack-callout{position:absolute;left:8px;right:8px;top:10px;z-index:74;padding:8px 10px;border-radius:11px;text-align:center;background:linear-gradient(180deg,rgba(135,43,82,.96),rgba(72,23,55,.96));border:1px solid #ff8bac;box-shadow:0 8px 22px rgba(0,0,0,.38);animation:aiAttackPop 1.45s ease both}.ai-attack-callout strong{display:block;color:#fff;font-size:10px;font-weight:1000}.ai-attack-callout span{display:block;margin-top:2px;color:#ffd1dd;font-size:9px;font-weight:1000}@keyframes aiAttackPop{0%{opacity:0;transform:translateY(-8px) scale(.92)}15%,72%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-12px)}}
+    @media(max-width:720px){.ko-incoming-strip{top:66px;right:6px;min-width:78px;padding:5px}.ko-incoming-strip strong{font-size:18px}.ko-special-fx{top:12%;padding:10px 14px}.ai-attack-callout{left:4px;right:4px;top:5px;padding:6px}.ai-attack-callout strong{font-size:8px}.ai-attack-callout span{font-size:7px}}
   `;document.head.appendChild(style);
 
   setInterval(()=>{if(window.TBAIMode&&!game?.classList.contains('hidden'))exposeStats();},350);
