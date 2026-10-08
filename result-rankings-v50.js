@@ -96,6 +96,13 @@
           <em><small>KO</small>${r.ko}</em><em><small>LINES SENT</small>${r.sent}</em><em><small>SCORE</small>${r.score==null?'—':r.score.toLocaleString()}</em>
         </div>`).join('')}
       </div>`;
+    if(window.TBAIMode && window.KOVersusStats){
+      const s=window.KOVersusStats;
+      const breakdown=document.createElement('div');
+      breakdown.className='attack-breakdown';
+      breakdown.innerHTML='<span><b>YOU</b> generated '+num(s.localGenerated)+' · cancelled '+num(s.localCancelled)+' · sent '+num(s.localSent)+'</span><span><b>AI</b> generated '+num(s.aiGenerated)+' · cancelled '+num(s.aiCancelled)+' · sent '+num(s.aiSent)+'</span>';
+      box.appendChild(breakdown);
+    }
   }
 
   function partyNameScores(){
@@ -198,7 +205,7 @@
     .round-ranking-box{margin:11px 0 2px;padding:10px;border-radius:15px;background:#121331;border:1px solid #45417e;text-align:left}
     .ranking-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px}.ranking-heading span,.party-ranking-label{color:#8eeaff;font-size:8px;font-weight:1000;letter-spacing:.13em}.ranking-heading strong{color:#fff080;font-size:9px;text-align:right}
     .ranking-table{display:grid;gap:5px}.ranking-row{display:grid;grid-template-columns:42px minmax(90px,1fr) 54px 72px 78px;gap:5px;align-items:center;padding:7px;border-radius:10px;background:#1c1c48;border:1px solid #3e3c76}.ranking-row.leader{border-color:#ffe36b;background:linear-gradient(90deg,#3b315e,#232253)}.ranking-row>b{color:#72eaff;font-size:10px}.ranking-row>span{color:#fff;font-size:10px;font-weight:1000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ranking-row>span small{color:#9d97cb;font-size:6px}.ranking-row em{font-style:normal;text-align:right;color:#fff;font-size:11px;font-weight:1000}.ranking-row em small{display:block;color:#8e89bb;font-size:6px;font-weight:900}
-    .party-current-top{margin:8px 0;padding:10px 12px;border-radius:13px;background:linear-gradient(90deg,#4a3970,#2d2868);border:1px solid #ffe16a;text-align:left}.party-current-top span{display:block;color:#ffe36f;font-size:8px;font-weight:1000;letter-spacing:.13em}.party-current-top strong{display:block;color:#fff;font-size:20px}.party-current-top small{color:#c8c2e8;font-size:9px}.party-ranking-label{margin:9px 0 6px;text-align:left}.party-result-row{grid-template-columns:45px minmax(110px,1fr) 46px 58px 70px 78px!important}.party-result-score{color:#79e9ff!important}
+    .attack-breakdown{display:grid;gap:3px;margin-top:7px;padding:7px 8px;border-radius:10px;background:#17183b;border:1px solid #35366b;color:#a9a5cf;font-size:7px;line-height:1.45}.attack-breakdown b{color:#fff}.attack-breakdown span:first-child b{color:#76e9ff}.attack-breakdown span:last-child b{color:#ff9ab6}\n    .party-current-top{margin:8px 0;padding:10px 12px;border-radius:13px;background:linear-gradient(90deg,#4a3970,#2d2868);border:1px solid #ffe16a;text-align:left}.party-current-top span{display:block;color:#ffe36f;font-size:8px;font-weight:1000;letter-spacing:.13em}.party-current-top strong{display:block;color:#fff;font-size:20px}.party-current-top small{color:#c8c2e8;font-size:9px}.party-ranking-label{margin:9px 0 6px;text-align:left}.party-result-row{grid-template-columns:45px minmax(110px,1fr) 46px 58px 70px 78px!important}.party-result-score{color:#79e9ff!important}
     @media(max-width:620px){.ranking-row{grid-template-columns:36px minmax(74px,1fr) 39px 55px 61px;padding:6px 4px}.ranking-row em{font-size:9px}.party-result-row{grid-template-columns:38px minmax(78px,1fr) 34px 42px 49px 58px!important}.party-result-row em{font-size:6.5px!important}}
   `;
   document.head.appendChild(style);
