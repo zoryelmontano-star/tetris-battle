@@ -135,7 +135,12 @@
       try { if (typeof quitGame === 'function') quitGame(); else $('quitBtn')?.click(); } catch {}
       return;
     }
-    if (!running() || isPaused()) return;
+    if (!running() || isPaused()) {
+      // Tutorial lessons should still respond to the displayed touch controls even before
+      // the practice board is marked as running.
+      if (window.TBTutorialActive && !isPaused()) advanceTutorial(action);
+      return;
+    }
 
     if (['left','right','down'].includes(action)) startRepeat(btn,action);
     else {
