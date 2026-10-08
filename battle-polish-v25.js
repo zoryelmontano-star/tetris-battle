@@ -118,6 +118,7 @@
     window.dispatchEvent(new CustomEvent('tb-ai-lines',{detail:{total:aiLines}}));
   }
   function aiKO(){
+    window.dispatchEvent(new CustomEvent('tb-ai-ko',{detail:{total:aiLines}}));
     window.TBBattle?.aiKnockedOut?.();
     resetAIVisual(false);
   }
@@ -131,6 +132,8 @@
     if(!aiActive)return;
     lockTo(aiBoard,aiActive.type,aiActive.cells,aiActive.x,aiActive.y);
     const cleared=clearRows(aiBoard);
+    // Report every locked AI piece so versus combo state can reset after a non-clearing piece.
+    window.dispatchEvent(new CustomEvent('tb-ai-lock',{detail:{cleared,total:aiLines}}));
     if(cleared>0){
       aiLines+=cleared;
       window.dispatchEvent(new CustomEvent('tb-ai-lines',{detail:{total:aiLines,cleared}}));
