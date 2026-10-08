@@ -69,4 +69,26 @@ test.describe('versus rules',()=>{
     expect(stats.score).toBe(300);
     expect(stats.linesSent).toBe(1);
   });
+  test('AI combo breaks when an AI piece locks without clearing',async({page})=>{
+    await open(page);
+    const stats=await page.evaluate(()=>{
+      const fire=(cleared,total)=>{
+        window.dispatchEvent(new CustomEvent('tb-ai-lines',{detail:{cleared,total}}));
+        window.TBBattle.aiAttack();
+      };
+      fire(2,2); // Double: 1 sent
+      fire(2,4); // 1-Combo Double: still 1 sent
+      window.dispatchEvent(new CustomEvent('tb-ai-lock',{detail:{cleared:0,total:4}}));
+      fire(2,6); // combo must be reset, so this is only 1 sent
+      return {
+        linesSent:window.KOVersusStats?.aiSent,
+        combo:window.KOVersusStats?.aiCombo,
+        score:window.KOVersusStats?.aiScore
+      };
+    });
+    expect(stats.linesSent).toBe(3);
+    expect(stats.combo).toBe(0);
+    expect(stats.score).toBe(975);
+  });
+
 });
